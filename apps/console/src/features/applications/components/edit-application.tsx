@@ -747,11 +747,7 @@ export const EditApplication: FunctionComponent<EditApplicationPropsInterface> =
             return [];
         }
 
-        if (tabPaneExtensions && tabPaneExtensions.length > 0
-            && application?.templateId !== CustomApplicationTemplate.id
-            && application?.templateId !== ApplicationManagementConstants.CUSTOM_APPLICATION_OIDC
-            && application?.templateId !== ApplicationManagementConstants.CUSTOM_APPLICATION_PASSIVE_STS
-            && application?.templateId !== ApplicationManagementConstants.CUSTOM_APPLICATION_SAML) {
+        if (tabPaneExtensions && tabPaneExtensions.length > 0) {
             extensionPanes.push(...tabPaneExtensions);
         }
 
