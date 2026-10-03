@@ -33,4 +33,8 @@ export interface CustomerDataServiceEndpointsInterface {
      * API to get the admin config.
      */
     cdsConfig: string;
+    /**
+     * API to list the organizations of the tree and to reconcile them (B2B).
+     */
+    cdsOrganizations: string;
 }

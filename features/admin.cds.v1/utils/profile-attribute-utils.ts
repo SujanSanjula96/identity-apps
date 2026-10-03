@@ -189,11 +189,13 @@ export const toProfileSchemaListingRows = (schema: ProfileSchemaFullResponse): P
             attribute_id: a.attribute_id,
             attribute_name: name,
             chip_label: getScopeLabel("traits"),
-            deletable: true,
+            // B2B: only the owner organization can delete a shared attribute.
+            deletable: a.origin !== "SHARED",
             display_name: relativeName("traits", name),
             editable: true,
             id: rowId("traits", name, a.attribute_id),
-            scope: "traits"
+            scope: "traits",
+            shared_by: a.origin === "SHARED" ? a.owner_org_handle : undefined
         });
     });
 

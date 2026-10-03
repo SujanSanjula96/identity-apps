@@ -18,6 +18,124 @@
 
 export interface CustomerDataServiceNS {
 
+    b2b: {
+        organizations: {
+            columns: {
+                handle: string;
+                level: string;
+                name: string;
+                status: string;
+            };
+            description: {
+                disabled: string;
+                root: string;
+                subOrganization: string;
+            };
+            empty: string;
+            heading: string;
+            level: {
+                child: string;
+                current: string;
+                root: string;
+            };
+            notifications: {
+                fetch: {
+                    error: {
+                        description: string;
+                        message: string;
+                    };
+                };
+                sync: {
+                    error: {
+                        description: string;
+                        message: string;
+                    };
+                    success: {
+                        description: string;
+                        message: string;
+                    };
+                };
+            };
+            status: {
+                ACTIVE: string;
+                DELETED: string;
+                DISABLED: string;
+            };
+            syncButton: string;
+            syncHint: string;
+            toggleHint: string;
+        };
+        sharing: {
+            actions: {
+                save: string;
+                share: string;
+            };
+            description: string;
+            exclusions: {
+                hint: string;
+                label: string;
+                placeholder: string;
+            };
+            heading: string;
+            includeSubOrganizations: string;
+            modal: {
+                header: string;
+                subheader: string;
+            };
+            noChildren: string;
+            notShareable: string;
+            notifications: {
+                error: {
+                    description: string;
+                    message: string;
+                };
+                stopped: {
+                    description: string;
+                    message: string;
+                };
+                success: {
+                    description: string;
+                    message: string;
+                };
+            };
+            options: {
+                all: string;
+                allHint: string;
+                none: string;
+                selected: string;
+                selectedHint: string;
+            };
+            resource: {
+                attribute: string;
+                rule: string;
+            };
+            sharedBy: string;
+            sharedNotice: {
+                attribute: string;
+                rule: string;
+            };
+            status: {
+                columns: {
+                    organization: string;
+                    reason: string;
+                    state: string;
+                };
+                empty: string;
+                heading: string;
+                reasons: {
+                    LOCAL_NAME_CONFLICT: string;
+                    MISSING_ATTRIBUTE: string;
+                    SHARED_NAME_CONFLICT: string;
+                };
+                states: {
+                    ACTIVE: string;
+                    CONFLICTED: string;
+                    INACTIVE_MISSING_ATTRIBUTE: string;
+                };
+            };
+            tab: string;
+        };
+    };
     common: {
         buttons: {
             cancel: string;

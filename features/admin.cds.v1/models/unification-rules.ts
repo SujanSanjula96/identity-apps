@@ -16,12 +16,19 @@
  * under the License.
  */
 
+import { ResourceOrigin, ShareStateValue } from "./b2b";
+
 export interface UnificationRuleModel {
     rule_id: string;
     property_name: string;
     rule_name: string;
     is_active: boolean;
     priority: number;
+    // B2B: OWNED, or SHARED by the organization in owner_org_handle.
+    origin?: ResourceOrigin;
+    owner_org_handle?: string;
+    // B2B: ACTIVE, or the reason why the rule does not run in this organization.
+    state?: ShareStateValue;
 }
 
 /**

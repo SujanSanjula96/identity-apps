@@ -36,11 +36,14 @@ import React, { Dispatch, FunctionComponent, ReactElement, SyntheticEvent, useMe
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { AnyAction } from "redux";
-import { Header, Icon, Label } from "semantic-ui-react";
+import { Button, Header, Icon, Label, Message, Modal } from "semantic-ui-react";
 import { deleteUnificationRule, updateUnificationRule } from "../api/unification-rules";
 import { TEMP_PRIORITY } from "../models/constants";
 import { UnificationRuleModel } from "../models/unification-rules";
 import { getPropertyScope } from "../utils/profile-attribute-utils";
+import ShareSettings from "./share-settings";
+
+const isSharedRule = (rule: UnificationRuleModel): boolean => rule.origin === "SHARED";
 
 interface UnificationRulesListProps {
     rules: UnificationRuleModel[];
@@ -90,10 +93,21 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
         });
     }, [ rules, searchQuery ]);
 
-    const sortedRules: UnificationRuleModel[] = useMemo(
-        () => [ ...filteredRules ].sort((a:UnificationRuleModel, b:UnificationRuleModel) => a.priority - b.priority),
+    // B2B: CDS returns the shared rules first, in the evaluation order. They keep that order.
+    // The rules of this organization follow, by priority. Only they can move.
+    const ownedRules: UnificationRuleModel[] = useMemo(
+        () => filteredRules
+            .filter((rule: UnificationRuleModel) => !isSharedRule(rule))
+            .sort((a:UnificationRuleModel, b:UnificationRuleModel) => a.priority - b.priority),
         [ filteredRules ]
     );
+    const sortedRules: UnificationRuleModel[] = useMemo(
+        () => [ ...filteredRules.filter(isSharedRule), ...ownedRules ],
+        [ filteredRules, ownedRules ]
+    );
+    const hasSharedRules: boolean = sortedRules.some(isSharedRule);
+
+    const [ sharingRule, setSharingRule ] = useState<UnificationRuleModel | null>(null);
 
     const [ deletingRule, setDeletingRule ] = useState<UnificationRuleModel | null>(null);
     const [ togglingRule, setTogglingRule ] = useState<UnificationRuleModel | null>(null);
@@ -105,15 +119,15 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
     const [ isToggleInProgress, setIsToggleInProgress ] = useState<boolean>(false);
 
     const canMoveUp = (rule: UnificationRuleModel): boolean => {
-        const idx: number = sortedRules.findIndex((r: UnificationRuleModel) => r.rule_id === rule.rule_id);
+        const idx: number = ownedRules.findIndex((r: UnificationRuleModel) => r.rule_id === rule.rule_id);
 
         return idx > 0;
     };
 
     const canMoveDown = (rule: UnificationRuleModel): boolean => {
-        const idx: number = sortedRules.findIndex((r: UnificationRuleModel) => r.rule_id === rule.rule_id);
+        const idx: number = ownedRules.findIndex((r: UnificationRuleModel) => r.rule_id === rule.rule_id);
 
-        return idx >= 0 && idx < sortedRules.length - 1;
+        return idx >= 0 && idx < ownedRules.length - 1;
     };
 
     /**
@@ -135,15 +149,15 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
     ): Promise<void> => {
         if (isSwapping) return;
 
-        const currentIndex: number = sortedRules.findIndex((r: UnificationRuleModel) => r.rule_id === rule.rule_id);
+        const currentIndex: number = ownedRules.findIndex((r: UnificationRuleModel) => r.rule_id === rule.rule_id);
 
         if (currentIndex === -1) return;
 
         const swapIndex: number = direction === "increased" ? currentIndex - 1 : currentIndex + 1;
 
-        if (swapIndex < 0 || swapIndex >= sortedRules.length) return;
+        if (swapIndex < 0 || swapIndex >= ownedRules.length) return;
 
-        const adjacentRule: UnificationRuleModel = sortedRules[swapIndex];
+        const adjacentRule: UnificationRuleModel = ownedRules[swapIndex];
         const originalPriority: number = rule.priority;
         const targetPriority: number = adjacentRule.priority;
 
@@ -283,7 +297,28 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
                         size="mini"
                         spaced="right"
                     />
-                    <Header.Content>{ rule.rule_name }</Header.Content>
+                    <Header.Content>
+                        { rule.rule_name }
+                        { isSharedRule(rule) && (
+                            <Label size="mini" color="teal" basic style={ { marginLeft: "8px" } }>
+                                { t("customerDataService:b2b.sharing.sharedBy", { org: rule.owner_org_handle }) }
+                            </Label>
+                        ) }
+                        { rule.state && rule.state !== "ACTIVE" && (
+                            <Tooltip
+                                title={ t("customerDataService:b2b.sharing.status.reasons." +
+                                    (rule.state === "INACTIVE_MISSING_ATTRIBUTE"
+                                        ? "MISSING_ATTRIBUTE" : "SHARED_NAME_CONFLICT"),
+                                { resource: t("customerDataService:b2b.sharing.resource.rule") }) }
+                            >
+                                <span>
+                                    <Label size="mini" color="grey" style={ { marginLeft: "4px" } }>
+                                        { t(`customerDataService:b2b.sharing.status.states.${ rule.state }`) }
+                                    </Label>
+                                </span>
+                            </Tooltip>
+                        ) }
+                    </Header.Content>
                 </Box>
             ),
             title: t("customerDataService:unificationRules.list.columns.rule"),
@@ -333,6 +368,13 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
             id: "priority",
             key: "priority",
             render: (rule: UnificationRuleModel) => {
+                if (isSharedRule(rule)) {
+                    return (
+                        <Typography variant="body2" sx={ { color: "text.secondary", textAlign: "center" } }>
+                            { rule.priority }
+                        </Typography>
+                    );
+                }
                 const moveUpDisabled: boolean = !canMoveUp(rule) || isSwapping;
                 const moveDownDisabled: boolean = !canMoveDown(rule) || isSwapping;
 
@@ -395,8 +437,26 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
             dataIndex: "action",
             id: "action",
             key: "action",
-            render: (rule: UnificationRuleModel) => (
+            render: (rule: UnificationRuleModel) => isSharedRule(rule) ? (
                 <Box sx={ { alignItems: "center", display: "flex", gap: "4px", justifyContent: "flex-end" } }>
+                    <Tooltip title={ t("customerDataService:b2b.sharing.sharedNotice.rule") }>
+                        <span><Icon name="lock" color="grey" /></span>
+                    </Tooltip>
+                </Box>
+            ) : (
+                <Box sx={ { alignItems: "center", display: "flex", gap: "4px", justifyContent: "flex-end" } }>
+                    <Tooltip title={ t("customerDataService:b2b.sharing.actions.share") }>
+                        <IconButton
+                            size="small"
+                            onClick={ (e: SyntheticEvent) => {
+                                e.stopPropagation();
+                                setSharingRule(rule);
+                            } }
+                            data-componentid={ `unification-rule-share-${ rule.rule_id }` }
+                        >
+                            <Icon name="share alternate" fitted />
+                        </IconButton>
+                    </Tooltip>
                     <Tooltip
                         title={ rule.is_active
                             ? t("customerDataService:unificationRules.list.actions.disable")
@@ -436,6 +496,12 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
 
     return (
         <>
+            { hasSharedRules && (
+                <Message info size="small" data-componentid="unification-rules-shared-notice">
+                    <Icon name="share alternate" />
+                    { t("customerDataService:b2b.sharing.sharedNotice.rule") }
+                </Message>
+            ) }
             <DataTable<UnificationRuleModel>
                 isLoading={ isLoading }
                 columns={ columns }
@@ -444,6 +510,37 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
                 showActions={ true }
                 onRowClick={ () => {} }
             />
+
+            { /* ── Share modal (B2B) ── */ }
+            { sharingRule && (
+                <Modal
+                    open
+                    size="small"
+                    dimmer="blurring"
+                    onClose={ () => setSharingRule(null) }
+                    data-componentid="unification-rule-share-modal"
+                >
+                    <Modal.Header>
+                        { t("customerDataService:b2b.sharing.modal.header") }
+                        <Header.Subheader>
+                            { t("customerDataService:b2b.sharing.modal.subheader",
+                                { ruleName: sharingRule.rule_name }) }
+                        </Header.Subheader>
+                    </Modal.Header>
+                    <Modal.Content scrolling>
+                        <ShareSettings
+                            resource={ { id: sharingRule.rule_id, type: "rule" } }
+                            onUpdate={ () => mutate?.() }
+                            data-componentid="unification-rule-share-settings"
+                        />
+                    </Modal.Content>
+                    <Modal.Actions>
+                        <Button basic onClick={ () => setSharingRule(null) }>
+                            { t("customerDataService:common.buttons.close") }
+                        </Button>
+                    </Modal.Actions>
+                </Modal>
+            ) }
 
             { /* ── Toggle confirmation modal ── */ }
             { togglingRule && (

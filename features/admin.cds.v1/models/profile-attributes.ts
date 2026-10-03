@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import { ResourceOrigin } from "./b2b";
+
 type ProfileSchemaGroupedScope =
     | "identity_attributes"
     | "traits"
@@ -65,6 +67,10 @@ export interface ProfileSchemaAttribute {
 
     // Canonical values for attributes for options value type.
     canonical_values?: CanonicalValues[];
+
+    // B2B: OWNED, or SHARED by the organization in owner_org_handle.
+    origin?: ResourceOrigin;
+    owner_org_handle?: string;
 }
 
 interface ProfileSchemaCoreAttribute {

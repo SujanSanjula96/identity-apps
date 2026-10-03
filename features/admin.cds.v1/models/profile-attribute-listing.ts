@@ -36,6 +36,9 @@ export interface ProfileSchemaListingRow {
 
   editable: boolean;
   deletable: boolean;
+
+  // B2B: the owner organization of a shared attribute.
+  shared_by?: string;
 }
 
 /**

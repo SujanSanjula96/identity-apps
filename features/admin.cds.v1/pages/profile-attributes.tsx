@@ -175,11 +175,13 @@ const toRowsFromScopeResponse = (
             attribute_name: fullName,
             belongs_to: undefined,
             chip_label: scope,
-            deletable: scope === "traits",
+            // B2B: only the owner organization can delete a shared attribute.
+            deletable: scope === "traits" && a.origin !== "SHARED",
             display_name: display,
             editable: true,
             id: `${scope}:${a.attribute_id ?? fullName}`,
-            scope
+            scope,
+            shared_by: a.origin === "SHARED" ? a.owner_org_handle : undefined
         };
     });
 };

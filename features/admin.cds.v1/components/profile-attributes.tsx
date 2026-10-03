@@ -100,6 +100,17 @@ export const ProfileSchemaListing: FunctionComponent<ProfileSchemaListingPropsIn
                     />
                     <Header.Content>
                         { row.display_name }
+                        { row.shared_by && (
+                            <Label
+                                size="mini"
+                                color="teal"
+                                basic
+                                style={ { marginLeft: "8px" } }
+                                data-componentid={ `${componentId}-shared-label` }
+                            >
+                                { t("b2b.sharing.sharedBy", { org: row.shared_by }) }
+                            </Label>
+                        ) }
                     </Header.Content>
                 </Header>
             ),

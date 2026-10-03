@@ -24,6 +24,124 @@ import { CustomerDataServiceNS } from "../../../models";
  */
 
 export const customerDataService: CustomerDataServiceNS = {
+    b2b: {
+        organizations: {
+            columns: {
+                handle: "Handle",
+                level: "Level",
+                name: "Organization",
+                status: "Status"
+            },
+            description: {
+                disabled: "When you enable Customer Data Service, it is enabled for this organization and for all its sub organizations.",
+                root: "Customer Data Service is enabled for this organization and for all its sub organizations. A new sub organization gets it automatically.",
+                subOrganization: "This organization gets Customer Data Service from its root organization {{rootName}}. Only the root organization can enable or disable it."
+            },
+            empty: "This organization has no sub organizations.",
+            heading: "Organizations",
+            level: {
+                child: "Level {{depth}}",
+                current: "This organization",
+                root: "Root"
+            },
+            notifications: {
+                fetch: {
+                    error: {
+                        description: "Could not get the organizations from Customer Data Service.",
+                        message: "Something went wrong"
+                    }
+                },
+                sync: {
+                    error: {
+                        description: "Could not sync the organizations. Try again.",
+                        message: "Sync error"
+                    },
+                    success: {
+                        description: "Customer Data Service knows {{total}} organizations. Added: {{added}}. Removed: {{deleted}}.",
+                        message: "Organizations synced"
+                    }
+                }
+            },
+            status: {
+                ACTIVE: "Active",
+                DELETED: "Deleted",
+                DISABLED: "Disabled"
+            },
+            syncButton: "Sync organizations",
+            syncHint: "Customer Data Service gets organization changes from events. Sync to read the full organization tree again.",
+            toggleHint: "Only the root organization can change this setting."
+        },
+        sharing: {
+            actions: {
+                save: "Save",
+                share: "Share"
+            },
+            description: "A sub organization can use a shared {{resource}}, but it cannot change it.",
+            exclusions: {
+                hint: "Customer Data Service does not share with an excluded organization or with the organizations below it.",
+                label: "Exclude organizations",
+                placeholder: "Select organizations"
+            },
+            heading: "Share with sub organizations",
+            includeSubOrganizations: "Include its sub organizations",
+            modal: {
+                header: "Share unification rule",
+                subheader: "Share the rule {{ruleName}} with sub organizations."
+            },
+            noChildren: "This organization has no sub organizations to share with.",
+            notShareable: "In this version, you can share only traits attributes that are not complex.",
+            notifications: {
+                error: {
+                    description: "Could not save the share settings.",
+                    message: "Share error"
+                },
+                stopped: {
+                    description: "The {{resource}} is not shared now.",
+                    message: "Share stopped"
+                },
+                success: {
+                    description: "The share settings of the {{resource}} are saved.",
+                    message: "Share settings saved"
+                }
+            },
+            options: {
+                all: "Share with all sub organizations",
+                allHint: "Organizations that you create later also get it.",
+                none: "Do not share",
+                selected: "Share with selected organizations",
+                selectedHint: "Select direct sub organizations of this organization."
+            },
+            resource: {
+                attribute: "attribute",
+                rule: "rule"
+            },
+            sharedBy: "Shared by {{org}}",
+            sharedNotice: {
+                attribute: "The organization {{org}} owns this attribute and shares it with this organization. You cannot change or delete it here.",
+                rule: "Rules that other organizations share run first, in the order of their owner. You cannot change them here."
+            },
+            status: {
+                columns: {
+                    organization: "Organization",
+                    reason: "Details",
+                    state: "State"
+                },
+                empty: "The share does not reach any organization.",
+                heading: "Share status",
+                reasons: {
+                    LOCAL_NAME_CONFLICT: "The organization has its own {{resource}} with the same name.",
+                    MISSING_ATTRIBUTE: "The organization cannot see an attribute with the name and the type of the rule.",
+                    SHARED_NAME_CONFLICT: "Another shared {{resource}} with the same name is active in the organization."
+                },
+                states: {
+                    ACTIVE: "Active",
+                    CONFLICTED: "Conflict",
+                    INACTIVE_MISSING_ATTRIBUTE: "Inactive"
+                }
+            },
+            tab: "Sharing"
+        }
+    },
     common: {
         buttons: {
             cancel: "Cancel",

@@ -31,9 +31,11 @@ import { Checkbox, CheckboxProps, Divider, Header } from "semantic-ui-react";
 import { ReactComponent as ProfileAttributesIcon } from "../assets/images/icons/cds-profile-attributes.svg";
 import { ReactComponent as UnificationRuleIcon } from "../assets/images/icons/unification-rules.svg";
 import ConfigurationCard from "../components/configuration-card";
+import OrganizationsBox from "../components/organizations-box";
 import ProfilesSection from "../components/profiles-section";
 import useCDSToggle from "../hooks/use-cds-toggle";
 import useCDSConfig from "../hooks/use-config";
+import { useIsSubOrganization } from "../utils/b2b-utils";
 import "./customer-data-profile.scss";
 
 /**
@@ -63,6 +65,9 @@ const CustomerDataProfilePage: FunctionComponent<IdentifiableComponentInterface>
 
     const isCDSEnabled: boolean = cdsConfig?.cds_enabled ?? false;
 
+    // B2B: a sub organization inherits the enablement of its root, so it cannot change it.
+    const isSubOrganization: boolean = useIsSubOrganization();
+
     const handleToggle: (event: SyntheticEvent, data: CheckboxProps) => Promise<void> =
         async (_: SyntheticEvent, data: CheckboxProps): Promise<void> => {
             const isUpdateSuccessful: boolean = await toggleCDS(data.checked === true);
@@ -89,8 +94,20 @@ const CustomerDataProfilePage: FunctionComponent<IdentifiableComponentInterface>
                 toggle
                 onChange={ handleToggle }
                 checked={ isCDSEnabled }
-                readOnly={ !hasCDSUpdateScopes || isUpdating }
+                readOnly={ !hasCDSUpdateScopes || isUpdating || isSubOrganization }
+                disabled={ isSubOrganization }
                 data-componentid={ `${ componentId }-enable-toggle` }
+            />
+            { isSubOrganization && (
+                <p className="hint-description" data-componentid={ `${ componentId }-enable-toggle-hint` }>
+                    { t("customerDataService:b2b.organizations.toggleHint") }
+                </p>
+            ) }
+            <Divider hidden />
+            <OrganizationsBox
+                isCDSEnabled={ isCDSEnabled }
+                canUpdate={ hasCDSUpdateScopes }
+                data-componentid={ `${ componentId }-organizations-box` }
             />
             <Divider hidden />
             <ConfigurationCard
