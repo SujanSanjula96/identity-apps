@@ -194,7 +194,6 @@ export interface CustomerDataServiceNS {
             heading: string;
         };
         backButton: string;
-        disabledHint: string;
         notifications: {
             update: {
                 error: {

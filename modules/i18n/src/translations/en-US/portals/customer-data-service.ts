@@ -176,7 +176,7 @@ export const customerDataService: CustomerDataServiceNS = {
         backButton: "Go back to Customer Data",
         configuration: {
             organizationSettings: {
-                description: "Enable Customer Data Service and view the organizations that use it",
+                description: "View the organizations that use Customer Data Service",
                 title: "Organization Settings"
             },
             profileAttributes: {
@@ -188,7 +188,6 @@ export const customerDataService: CustomerDataServiceNS = {
                 title: "Unification Rules"
             }
         },
-        disabledHint: "Customer Data Service is disabled. Enable it in Organization Settings to manage attributes, rules, and profiles.",
         enable: {
             label: "Enable Customer Data Service"
         },
@@ -215,7 +214,7 @@ export const customerDataService: CustomerDataServiceNS = {
     },
     organizationSettings: {
         page: {
-            description: "Enable Customer Data Service and manage how it applies to the organizations in this tree",
+            description: "View the organizations that use Customer Data Service and sync the organization tree",
             title: "Organization Settings"
         }
     },

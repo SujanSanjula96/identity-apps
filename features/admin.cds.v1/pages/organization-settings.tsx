@@ -20,29 +20,23 @@ import { useRequiredScopes } from "@wso2is/access-control";
 import { AppConstants } from "@wso2is/admin.core.v1/constants/app-constants";
 import { history } from "@wso2is/admin.core.v1/helpers/history";
 import { AppState } from "@wso2is/admin.core.v1/store";
-import { AlertLevels, FeatureAccessConfigInterface, IdentifiableComponentInterface } from "@wso2is/core/models";
-import { addAlert } from "@wso2is/core/store";
+import { FeatureAccessConfigInterface, IdentifiableComponentInterface } from "@wso2is/core/models";
 import { PageLayout } from "@wso2is/react-components";
-import React, { FunctionComponent, ReactElement, SyntheticEvent } from "react";
+import React, { FunctionComponent, ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { useDispatch, useSelector } from "react-redux";
-import { Dispatch } from "redux";
-import { Checkbox, CheckboxProps, Divider } from "semantic-ui-react";
+import { useSelector } from "react-redux";
 import OrganizationsBox from "../components/organizations-box";
-import useCDSToggle from "../hooks/use-cds-toggle";
 import useCDSConfig from "../hooks/use-config";
-import { useIsSubOrganization } from "../utils/b2b-utils";
 
 /**
- * Organization settings of CDS. Holds the CDS enable toggle and the organizations box (B2B).
- * The page is always reachable, also when CDS is disabled, because it is where CDS is enabled.
+ * Organization settings of CDS (B2B). Holds the organizations box: the organizations that use CDS,
+ * and the sync of the organization tree. The CDS enable toggle is on the Customer Data page.
  */
 const OrganizationSettingsPage: FunctionComponent<IdentifiableComponentInterface> = ({
     ["data-componentid"]: componentId = "cds-organization-settings-page"
 }: IdentifiableComponentInterface): ReactElement => {
 
     const { t } = useTranslation();
-    const dispatch: Dispatch = useDispatch();
 
     const cdsFeatureConfig: FeatureAccessConfigInterface = useSelector(
         (state: AppState) => state?.config?.ui?.features?.customerDataService
@@ -50,30 +44,9 @@ const OrganizationSettingsPage: FunctionComponent<IdentifiableComponentInterface
 
     const hasCDSUpdateScopes: boolean = useRequiredScopes(cdsFeatureConfig?.scopes?.update);
 
-    const {
-        data: cdsConfig,
-        mutate: mutateCDSConfig
-    } = useCDSConfig(cdsFeatureConfig?.enabled ?? false);
-
-    const { isUpdating, toggleCDS } = useCDSToggle(cdsConfig, mutateCDSConfig);
+    const { data: cdsConfig } = useCDSConfig(cdsFeatureConfig?.enabled ?? false);
 
     const isCDSEnabled: boolean = cdsConfig?.cds_enabled ?? false;
-
-    // B2B: a sub organization inherits the enablement of its root, so it cannot change it.
-    const isSubOrganization: boolean = useIsSubOrganization();
-
-    const handleToggle: (event: SyntheticEvent, data: CheckboxProps) => Promise<void> =
-        async (_: SyntheticEvent, data: CheckboxProps): Promise<void> => {
-            const isUpdateSuccessful: boolean = await toggleCDS(data.checked === true);
-
-            if (isUpdateSuccessful) {
-                dispatch(addAlert({
-                    description: t("customerDataService:landing.notifications.update.success.description"),
-                    level: AlertLevels.SUCCESS,
-                    message: t("customerDataService:landing.notifications.update.success.message")
-                }));
-            }
-        };
 
     return (
         <PageLayout
@@ -86,21 +59,6 @@ const OrganizationSettingsPage: FunctionComponent<IdentifiableComponentInterface
             } }
             data-componentid={ `${ componentId }-layout` }
         >
-            <Checkbox
-                label={ t("customerDataService:landing.enable.label") }
-                toggle
-                onChange={ handleToggle }
-                checked={ isCDSEnabled }
-                readOnly={ !hasCDSUpdateScopes || isUpdating || isSubOrganization }
-                disabled={ isSubOrganization }
-                data-componentid={ `${ componentId }-enable-toggle` }
-            />
-            { isSubOrganization && (
-                <p className="hint-description" data-componentid={ `${ componentId }-enable-toggle-hint` }>
-                    { t("customerDataService:b2b.organizations.toggleHint") }
-                </p>
-            ) }
-            <Divider hidden />
             <OrganizationsBox
                 isCDSEnabled={ isCDSEnabled }
                 canUpdate={ hasCDSUpdateScopes }
