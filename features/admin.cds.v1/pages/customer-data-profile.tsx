@@ -104,14 +104,17 @@ const CustomerDataProfilePage: FunctionComponent<IdentifiableComponentInterface>
                 </p>
             ) }
             <Divider hidden />
-            <ConfigurationCard
-                title={ t("customerDataService:landing.configuration.organizationSettings.title") }
-                description={ t("customerDataService:landing.configuration.organizationSettings.description") }
-                icon={ OrganizationSettingsIcon }
-                disabled={ !isCDSEnabled }
-                onClick={ () => history.push(AppConstants.getPaths().get("CDS_ORGANIZATION_SETTINGS")) }
-                data-componentid={ `${ componentId }-organization-settings-card` }
-            />
+            { /* B2B: a sub organization has nothing to change in the organization settings. */ }
+            { !isSubOrganization && (
+                <ConfigurationCard
+                    title={ t("customerDataService:landing.configuration.organizationSettings.title") }
+                    description={ t("customerDataService:landing.configuration.organizationSettings.description") }
+                    icon={ OrganizationSettingsIcon }
+                    disabled={ !isCDSEnabled }
+                    onClick={ () => history.push(AppConstants.getPaths().get("CDS_ORGANIZATION_SETTINGS")) }
+                    data-componentid={ `${ componentId }-organization-settings-card` }
+                />
+            ) }
             <ConfigurationCard
                 title={ t("customerDataService:landing.configuration.profileAttributes.title") }
                 description={ t("customerDataService:landing.configuration.profileAttributes.description") }
