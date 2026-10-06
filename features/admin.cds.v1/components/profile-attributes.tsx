@@ -16,6 +16,7 @@
  * under the License.
  */
 
+import Box from "@oxygen-ui/react/Box";
 import Chip from "@oxygen-ui/react/Chip";
 import { AppConstants } from "@wso2is/admin.core.v1/constants/app-constants";
 import { history } from "@wso2is/admin.core.v1/helpers/history";
@@ -45,6 +46,7 @@ import { Header, Label, SemanticICONS, SemanticWIDTHS } from "semantic-ui-react"
 import { deleteSchemaAttributeById } from "../api/profile-attributes";
 import { useCDSApplications } from "../hooks/use-cds-applications";
 import { ProfileSchemaListingRow, SCOPE_CONFIG } from "../models/profile-attribute-listing";
+import SharedChip from "./shared-chip";
 
 const COL_WIDTH_ATTRIBUTE: SemanticWIDTHS = 7;
 const COL_WIDTH_SCOPE: SemanticWIDTHS = 7;
@@ -99,18 +101,15 @@ export const ProfileSchemaListing: FunctionComponent<ProfileSchemaListingPropsIn
                         spaced="right"
                     />
                     <Header.Content>
-                        { row.display_name }
-                        { row.shared_by && (
-                            <Label
-                                size="mini"
-                                color="teal"
-                                basic
-                                style={ { marginLeft: "8px" } }
-                                data-componentid={ `${componentId}-shared-label` }
-                            >
-                                { t("b2b.sharing.sharedBy", { org: row.shared_by }) }
-                            </Label>
-                        ) }
+                        <Box sx={ { alignItems: "center", display: "inline-flex", gap: 1 } }>
+                            { row.display_name }
+                            { row.shared_by && (
+                                <SharedChip
+                                    ownerOrg={ row.shared_by }
+                                    data-componentid={ `${componentId}-shared-chip` }
+                                />
+                            ) }
+                        </Box>
                     </Header.Content>
                 </Header>
             ),

@@ -115,6 +115,7 @@ export const customerDataService: CustomerDataServiceNS = {
                 attribute: "attribute",
                 rule: "rule"
             },
+            shared: "Shared",
             sharedBy: "Shared by {{org}}",
             sharedNotice: {
                 attribute: "The organization {{org}} owns this attribute and shares it with this organization. You cannot change or delete it here.",
@@ -174,6 +175,10 @@ export const customerDataService: CustomerDataServiceNS = {
     landing: {
         backButton: "Go back to Customer Data",
         configuration: {
+            organizationSettings: {
+                description: "Enable Customer Data Service and view the organizations that use it",
+                title: "Organization Settings"
+            },
             profileAttributes: {
                 description: "Manage the attributes that make up the customer profiles",
                 title: "Profile Attributes"
@@ -183,6 +188,7 @@ export const customerDataService: CustomerDataServiceNS = {
                 title: "Unification Rules"
             }
         },
+        disabledHint: "Customer Data Service is disabled. Enable it in Organization Settings to manage attributes, rules, and profiles.",
         enable: {
             label: "Enable Customer Data Service"
         },
@@ -205,6 +211,12 @@ export const customerDataService: CustomerDataServiceNS = {
         profiles: {
             description: "Manage customer profiles which have identity, behavioural and application data.",
             heading: "Profiles"
+        }
+    },
+    organizationSettings: {
+        page: {
+            description: "Enable Customer Data Service and manage how it applies to the organizations in this tree",
+            title: "Organization Settings"
         }
     },
     profileAttributes: {

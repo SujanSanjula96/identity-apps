@@ -16,70 +16,42 @@
  * under the License.
  */
 
-import { useRequiredScopes } from "@wso2is/access-control";
+import Alert from "@oxygen-ui/react/Alert";
 import { AppConstants } from "@wso2is/admin.core.v1/constants/app-constants";
 import { history } from "@wso2is/admin.core.v1/helpers/history";
 import { AppState } from "@wso2is/admin.core.v1/store";
-import { AlertLevels, FeatureAccessConfigInterface, IdentifiableComponentInterface } from "@wso2is/core/models";
-import { addAlert } from "@wso2is/core/store";
+import { FeatureAccessConfigInterface, IdentifiableComponentInterface } from "@wso2is/core/models";
 import { PageLayout } from "@wso2is/react-components";
-import React, { FunctionComponent, ReactElement, SyntheticEvent } from "react";
+import React, { FunctionComponent, ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { useDispatch, useSelector } from "react-redux";
-import { Dispatch } from "redux";
-import { Checkbox, CheckboxProps, Divider, Header } from "semantic-ui-react";
+import { useSelector } from "react-redux";
+import { Divider, Header } from "semantic-ui-react";
+import { ReactComponent as OrganizationSettingsIcon } from "../assets/images/icons/cds-organization-settings.svg";
 import { ReactComponent as ProfileAttributesIcon } from "../assets/images/icons/cds-profile-attributes.svg";
 import { ReactComponent as UnificationRuleIcon } from "../assets/images/icons/unification-rules.svg";
 import ConfigurationCard from "../components/configuration-card";
-import OrganizationsBox from "../components/organizations-box";
 import ProfilesSection from "../components/profiles-section";
-import useCDSToggle from "../hooks/use-cds-toggle";
 import useCDSConfig from "../hooks/use-config";
-import { useIsSubOrganization } from "../utils/b2b-utils";
 import "./customer-data-profile.scss";
 
 /**
- * Unified Customer Data Profile page. Combines the CDS enable toggle,
- * the Profile Attributes / Unification Rules configuration cards, and
- * the customer profile list into a single view.
+ * Unified Customer Data Profile page. Combines the Organization Settings / Profile Attributes /
+ * Unification Rules configuration cards and the customer profile list into a single view.
+ * The CDS enable toggle is on the Organization Settings page.
  */
 const CustomerDataProfilePage: FunctionComponent<IdentifiableComponentInterface> = ({
     ["data-componentid"]: componentId = "customer-data-profile-page"
 }: IdentifiableComponentInterface): ReactElement => {
 
     const { t } = useTranslation();
-    const dispatch: Dispatch = useDispatch();
 
     const cdsFeatureConfig: FeatureAccessConfigInterface = useSelector(
         (state: AppState) => state?.config?.ui?.features?.customerDataService
     );
 
-    const hasCDSUpdateScopes: boolean = useRequiredScopes(cdsFeatureConfig?.scopes?.update);
-
-    const {
-        data: cdsConfig,
-        mutate: mutateCDSConfig
-    } = useCDSConfig(cdsFeatureConfig?.enabled ?? false);
-
-    const { isUpdating, toggleCDS } = useCDSToggle(cdsConfig, mutateCDSConfig);
+    const { data: cdsConfig, isLoading: isCDSConfigLoading } = useCDSConfig(cdsFeatureConfig?.enabled ?? false);
 
     const isCDSEnabled: boolean = cdsConfig?.cds_enabled ?? false;
-
-    // B2B: a sub organization inherits the enablement of its root, so it cannot change it.
-    const isSubOrganization: boolean = useIsSubOrganization();
-
-    const handleToggle: (event: SyntheticEvent, data: CheckboxProps) => Promise<void> =
-        async (_: SyntheticEvent, data: CheckboxProps): Promise<void> => {
-            const isUpdateSuccessful: boolean = await toggleCDS(data.checked === true);
-
-            if (isUpdateSuccessful) {
-                dispatch(addAlert({
-                    description: t("customerDataService:landing.notifications.update.success.description"),
-                    level: AlertLevels.SUCCESS,
-                    message: t("customerDataService:landing.notifications.update.success.message")
-                }));
-            }
-        };
 
     return (
         <PageLayout
@@ -89,27 +61,21 @@ const CustomerDataProfilePage: FunctionComponent<IdentifiableComponentInterface>
             className="customer-data-profile-page"
             data-componentid={ `${ componentId }-layout` }
         >
-            <Checkbox
-                label={ t("customerDataService:landing.enable.label") }
-                toggle
-                onChange={ handleToggle }
-                checked={ isCDSEnabled }
-                readOnly={ !hasCDSUpdateScopes || isUpdating || isSubOrganization }
-                disabled={ isSubOrganization }
-                data-componentid={ `${ componentId }-enable-toggle` }
-            />
-            { isSubOrganization && (
-                <p className="hint-description" data-componentid={ `${ componentId }-enable-toggle-hint` }>
-                    { t("customerDataService:b2b.organizations.toggleHint") }
-                </p>
+            { !isCDSConfigLoading && !isCDSEnabled && (
+                <>
+                    <Alert severity="info" data-componentid={ `${ componentId }-disabled-alert` }>
+                        { t("customerDataService:landing.disabledHint") }
+                    </Alert>
+                    <Divider hidden />
+                </>
             ) }
-            <Divider hidden />
-            <OrganizationsBox
-                isCDSEnabled={ isCDSEnabled }
-                canUpdate={ hasCDSUpdateScopes }
-                data-componentid={ `${ componentId }-organizations-box` }
+            <ConfigurationCard
+                title={ t("customerDataService:landing.configuration.organizationSettings.title") }
+                description={ t("customerDataService:landing.configuration.organizationSettings.description") }
+                icon={ OrganizationSettingsIcon }
+                onClick={ () => history.push(AppConstants.getPaths().get("CDS_ORGANIZATION_SETTINGS")) }
+                data-componentid={ `${ componentId }-organization-settings-card` }
             />
-            <Divider hidden />
             <ConfigurationCard
                 title={ t("customerDataService:landing.configuration.profileAttributes.title") }
                 description={ t("customerDataService:landing.configuration.profileAttributes.description") }

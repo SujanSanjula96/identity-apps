@@ -19,6 +19,7 @@
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import Switch from "@mui/material/Switch";
 import Tooltip from "@mui/material/Tooltip";
@@ -42,6 +43,7 @@ import { TEMP_PRIORITY } from "../models/constants";
 import { UnificationRuleModel } from "../models/unification-rules";
 import { getPropertyScope } from "../utils/profile-attribute-utils";
 import ShareSettings from "./share-settings";
+import SharedChip from "./shared-chip";
 
 const isSharedRule = (rule: UnificationRuleModel): boolean => rule.origin === "SHARED";
 
@@ -298,26 +300,30 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
                         spaced="right"
                     />
                     <Header.Content>
-                        { rule.rule_name }
-                        { isSharedRule(rule) && (
-                            <Label size="mini" color="teal" basic style={ { marginLeft: "8px" } }>
-                                { t("customerDataService:b2b.sharing.sharedBy", { org: rule.owner_org_handle }) }
-                            </Label>
-                        ) }
-                        { rule.state && rule.state !== "ACTIVE" && (
-                            <Tooltip
-                                title={ t("customerDataService:b2b.sharing.status.reasons." +
-                                    (rule.state === "INACTIVE_MISSING_ATTRIBUTE"
-                                        ? "MISSING_ATTRIBUTE" : "SHARED_NAME_CONFLICT"),
-                                { resource: t("customerDataService:b2b.sharing.resource.rule") }) }
-                            >
-                                <span>
-                                    <Label size="mini" color="grey" style={ { marginLeft: "4px" } }>
-                                        { t(`customerDataService:b2b.sharing.status.states.${ rule.state }`) }
-                                    </Label>
-                                </span>
-                            </Tooltip>
-                        ) }
+                        <Box sx={ { alignItems: "center", display: "inline-flex", gap: 1 } }>
+                            { rule.rule_name }
+                            { isSharedRule(rule) && (
+                                <SharedChip
+                                    ownerOrg={ rule.owner_org_handle }
+                                    data-componentid={ `cds-unification-rule-${ rule.rule_id }-shared-chip` }
+                                />
+                            ) }
+                            { rule.state && rule.state !== "ACTIVE" && (
+                                <Tooltip
+                                    title={ t("customerDataService:b2b.sharing.status.reasons." +
+                                        (rule.state === "INACTIVE_MISSING_ATTRIBUTE"
+                                            ? "MISSING_ATTRIBUTE" : "SHARED_NAME_CONFLICT"),
+                                    { resource: t("customerDataService:b2b.sharing.resource.rule") }) }
+                                >
+                                    <Chip
+                                        label={ t(`customerDataService:b2b.sharing.status.states.${ rule.state }`) }
+                                        size="small"
+                                        variant="outlined"
+                                        color="warning"
+                                    />
+                                </Tooltip>
+                            ) }
+                        </Box>
                     </Header.Content>
                 </Box>
             ),

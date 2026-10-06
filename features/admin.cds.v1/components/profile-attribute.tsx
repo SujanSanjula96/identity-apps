@@ -50,6 +50,7 @@ import { deleteSchemaAttributeById, updateSchemaAttributeById } from "../api/pro
 import ShareSettings from "./share-settings";
 import { useCDSApplications } from "../hooks/use-cds-applications";
 import { useSchemaAttributeById } from "../hooks/use-profile-attributes";
+import SharedChip from "./shared-chip";
 import { useSearchSubAttributes } from "../hooks/use-search-sub-attributes";
 import { SCOPE_CONFIG, SchemaListingScope } from "../models/profile-attribute-listing";
 import {
@@ -875,20 +876,23 @@ const ProfileAttributeEditPage: FunctionComponent<RouteComponentProps<RouteParam
                         </span>
                     </Image>
                 ) }
-                title={ title }
+                title={ isShared
+                    ? (
+                        <Box sx={ { alignItems: "center", display: "inline-flex", gap: 1 } }>
+                            { title }
+                            <SharedChip
+                                ownerOrg={ attribute.owner_org_handle }
+                                data-componentid={ `${componentId}-shared-chip` }
+                            />
+                        </Box>
+                    )
+                    : title }
                 pageTitle={ t("customerDataService:profileAttributes.edit.page.pageTitle") }
                 description={
                     cfg?.label
                         ? (
                             <div className="with-label ellipsis">
                                 <Label size="small">{ cfg.label }</Label>
-                                { isShared && (
-                                    <Label size="small" color="teal" data-componentid={ `${componentId}-shared-label` }>
-                                        <Icon name="share alternate" />
-                                        { t("customerDataService:b2b.sharing.sharedBy",
-                                            { org: attribute.owner_org_handle }) }
-                                    </Label>
-                                ) }
                             </div>
                         )
                         : null

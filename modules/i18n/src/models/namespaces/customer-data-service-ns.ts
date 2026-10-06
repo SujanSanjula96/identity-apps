@@ -109,6 +109,7 @@ export interface CustomerDataServiceNS {
                 attribute: string;
                 rule: string;
             };
+            shared: string;
             sharedBy: string;
             sharedNotice: {
                 attribute: string;
@@ -175,6 +176,10 @@ export interface CustomerDataServiceNS {
             label: string;
         };
         configuration: {
+            organizationSettings: {
+                description: string;
+                title: string;
+            };
             profileAttributes: {
                 description: string;
                 title: string;
@@ -189,6 +194,7 @@ export interface CustomerDataServiceNS {
             heading: string;
         };
         backButton: string;
+        disabledHint: string;
         notifications: {
             update: {
                 error: {
@@ -200,6 +206,13 @@ export interface CustomerDataServiceNS {
                     message: string;
                 };
             };
+        };
+    };
+
+    organizationSettings: {
+        page: {
+            description: string;
+            title: string;
         };
     };
 
