@@ -25,12 +25,13 @@ import { PageLayout } from "@wso2is/react-components";
 import React, { FunctionComponent, ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
+import OrganizationAccess from "../components/organization-access";
 import OrganizationsBox from "../components/organizations-box";
 import useCDSConfig from "../hooks/use-config";
 
 /**
- * Organization settings of CDS (B2B). Holds the organizations box: the organizations that use CDS,
- * and the sync of the organization tree. The CDS enable toggle is on the Customer Data page.
+ * Organization settings of CDS (B2B). Holds the organization access (the sub organizations that
+ * can use CDS) and the organizations box. The CDS enable toggle is on the Customer Data page.
  */
 const OrganizationSettingsPage: FunctionComponent<IdentifiableComponentInterface> = ({
     ["data-componentid"]: componentId = "cds-organization-settings-page"
@@ -59,9 +60,14 @@ const OrganizationSettingsPage: FunctionComponent<IdentifiableComponentInterface
             } }
             data-componentid={ `${ componentId }-layout` }
         >
+            { isCDSEnabled && (
+                <OrganizationAccess
+                    canUpdate={ hasCDSUpdateScopes }
+                    data-componentid={ `${ componentId }-organization-access` }
+                />
+            ) }
             <OrganizationsBox
                 isCDSEnabled={ isCDSEnabled }
-                canUpdate={ hasCDSUpdateScopes }
                 data-componentid={ `${ componentId }-organizations-box` }
             />
         </PageLayout>

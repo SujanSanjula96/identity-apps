@@ -25,23 +25,20 @@ export type ResourceOrigin = "OWNED" | "SHARED";
 /**
  * State of a shared resource in one target organization.
  */
-export type ShareStateValue = "ACTIVE" | "CONFLICTED" | "INACTIVE_MISSING_ATTRIBUTE";
+export type ShareStateValue = "ACTIVE" | "CONFLICTED" | "INACTIVE_MISSING_ATTRIBUTE" | "INACTIVE_APP_NOT_SHARED";
 
 /**
  * Why a shared resource is not active in a target organization.
  */
-export type ShareStateReason = "LOCAL_NAME_CONFLICT" | "SHARED_NAME_CONFLICT" | "MISSING_ATTRIBUTE";
+export type ShareStateReason =
+    | "LOCAL_NAME_CONFLICT"
+    | "SHARED_NAME_CONFLICT"
+    | "MISSING_ATTRIBUTE"
+    | "APP_NOT_SHARED";
 
 /**
- * Target scopes of a share policy.
- * ALL_DESCENDANTS: all organizations below the sharing organization, also the ones created later.
- * ORG: one direct child organization only.
- * ORG_SUBTREE: one direct child organization and all organizations below it.
- */
-export type ShareTargetScope = "ALL_DESCENDANTS" | "ORG" | "ORG_SUBTREE";
-
-/**
- * An organization that CDS knows, from GET /organizations.
+ * An organization that CDS knows, from GET /organizations. CDS stores no path and no depth.
+ * The Console computes the level of an organization from the parent links.
  */
 export interface CDSOrganization {
     org_id: string;
@@ -49,32 +46,39 @@ export interface CDSOrganization {
     org_name?: string;
     parent_org_id?: string;
     root_org_id: string;
-    path: string;
-    depth: number;
     status: "ACTIVE" | "DISABLED" | "DELETED";
     created_at?: string;
     updated_at?: string;
-    last_synced_at?: string;
 }
 
 /**
- * Result of POST /organizations/reconcile.
+ * An organization below another organization, with its level below that organization (1 for a
+ * direct child).
  */
-export interface CDSReconcileResult {
-    root_org_id: string;
-    total: number;
-    added: string[];
-    deleted: string[];
+export interface CDSOrganizationNode extends CDSOrganization {
+    level: number;
 }
 
-export interface ShareTarget {
-    scope: ShareTargetScope;
-    org_id?: string;
+/**
+ * A selected child organization of a target scope. With all_children, the policy also reaches all
+ * organizations below it, also the ones created later.
+ */
+export interface TargetChildOrg {
+    org_id: string;
+    all_children?: boolean;
 }
 
-export interface ShareRequest {
-    targets: ShareTarget[];
-    excluded_org_ids?: string[];
+/**
+ * The targets of a share policy or of the organization access. all_children reaches all
+ * organizations below the initiating organization. child_orgs reaches the selected organizations.
+ */
+export interface TargetOrgScope {
+    all_children?: boolean;
+    child_orgs?: TargetChildOrg[];
+}
+
+export interface SharePolicyRequest {
+    target_org_scope: TargetOrgScope;
 }
 
 export interface ShareState {
@@ -86,21 +90,43 @@ export interface ShareState {
 }
 
 /**
- * A share policy with the state of the resource in each organization that the policy reaches.
+ * A share policy of a profile attribute or a unification rule.
  */
 export interface SharePolicy {
-    policy_id: string;
+    id: string;
     resource_type: "SCHEMA_ATTRIBUTE" | "UNIFICATION_RULE";
     resource_id: string;
-    owner_org_id: string;
+    owning_org_id: string;
     initiating_org_id: string;
-    stage: "SHARE" | "RESHARE";
-    version: number;
-    targets: ShareTarget[];
-    excluded_org_ids: string[];
-    created_at: string;
-    updated_at: string;
+    target_org_scope: TargetOrgScope;
+}
+
+/**
+ * A share policy with the state of the resource in one page of the organizations that it reaches.
+ */
+export interface SharePolicyWithStates extends SharePolicy {
+    total_states: number;
     states: ShareState[];
+}
+
+export interface SharePolicyList {
+    total_results: number;
+    policies: SharePolicy[];
+}
+
+/**
+ * The organization access of a root organization: the sub organizations that can use CDS.
+ */
+export interface OrgAccessPolicy {
+    id: string;
+    owning_org_id: string;
+    initiating_org_id: string;
+    target_org_scope: TargetOrgScope;
+}
+
+export interface OrgAccessPolicyList {
+    total_results: number;
+    policies: OrgAccessPolicy[];
 }
 
 /**

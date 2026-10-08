@@ -40,12 +40,20 @@ import { AnyAction } from "redux";
 import { Button, Header, Icon, Label, Message, Modal } from "semantic-ui-react";
 import { deleteUnificationRule, updateUnificationRule } from "../api/unification-rules";
 import { TEMP_PRIORITY } from "../models/constants";
+import { ShareStateReason } from "../models/b2b";
 import { UnificationRuleModel } from "../models/unification-rules";
 import { getPropertyScope } from "../utils/profile-attribute-utils";
 import ShareSettings from "./share-settings";
 import SharedChip from "./shared-chip";
 
 const isSharedRule = (rule: UnificationRuleModel): boolean => rule.origin === "SHARED";
+
+// B2B: the reason that the tooltip shows for each state of a shared rule that is not active.
+const RULE_STATE_REASONS: Record<string, ShareStateReason> = {
+    CONFLICTED: "SHARED_NAME_CONFLICT",
+    INACTIVE_APP_NOT_SHARED: "APP_NOT_SHARED",
+    INACTIVE_MISSING_ATTRIBUTE: "MISSING_ATTRIBUTE"
+};
 
 interface UnificationRulesListProps {
     rules: UnificationRuleModel[];
@@ -311,8 +319,7 @@ export const UnificationRulesList: FunctionComponent<UnificationRulesListProps> 
                             { rule.state && rule.state !== "ACTIVE" && (
                                 <Tooltip
                                     title={ t("customerDataService:b2b.sharing.status.reasons." +
-                                        (rule.state === "INACTIVE_MISSING_ATTRIBUTE"
-                                            ? "MISSING_ATTRIBUTE" : "SHARED_NAME_CONFLICT"),
+                                        (RULE_STATE_REASONS[rule.state] ?? "SHARED_NAME_CONFLICT"),
                                     { resource: t("customerDataService:b2b.sharing.resource.rule") }) }
                                 >
                                     <Chip

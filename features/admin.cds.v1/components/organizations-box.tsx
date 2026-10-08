@@ -19,14 +19,13 @@
 import { AlertLevels, IdentifiableComponentInterface } from "@wso2is/core/models";
 import { addAlert } from "@wso2is/core/store";
 import { EmphasizedSegment } from "@wso2is/react-components";
-import React, { FunctionComponent, ReactElement, useEffect, useMemo, useState } from "react";
+import React, { FunctionComponent, ReactElement, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { Dispatch } from "redux";
-import { Button, Header, Icon, Label, Message, Table } from "semantic-ui-react";
-import { reconcileOrganizations } from "../api/b2b";
+import { Header, Icon, Label, Message, Table } from "semantic-ui-react";
 import useCDSOrganizations from "../hooks/use-cds-organizations";
-import { CDSOrganization, CDSReconcileResult } from "../models/b2b";
+import { CDSOrganization, CDSOrganizationNode } from "../models/b2b";
 import {
     descendantsOf,
     findCurrentOrganization,
@@ -40,21 +39,16 @@ interface OrganizationsBoxPropsInterface extends IdentifiableComponentInterface 
      * Whether CDS is enabled. In a sub organization, this is the enablement of the root.
      */
     isCDSEnabled: boolean;
-    /**
-     * Whether the user can change the CDS configuration.
-     */
-    canUpdate: boolean;
 }
 
 /**
- * Box next to the CDS enable toggle (B2B). In the root organization, it shows that the
- * enablement applies to the full organization tree, lists the sub organizations that CDS
- * knows, and syncs the tree again. In a sub organization, it shows that the root manages
- * the enablement, and lists the organizations below the current one.
+ * Box on the Organization Settings page (B2B). In the root organization, it lists the sub
+ * organizations that CDS knows. The organization access above it selects the ones that can use
+ * CDS. In a sub organization, it shows that the root manages the enablement, and lists the
+ * organizations below the current one.
  */
 const OrganizationsBox: FunctionComponent<OrganizationsBoxPropsInterface> = ({
     isCDSEnabled,
-    canUpdate,
     ["data-componentid"]: componentId = "cds-organizations-box"
 }: OrganizationsBoxPropsInterface): ReactElement => {
 
@@ -63,8 +57,7 @@ const OrganizationsBox: FunctionComponent<OrganizationsBoxPropsInterface> = ({
     const isSubOrganization: boolean = useIsSubOrganization();
     const currentRef: { id: string; handle: string } = useCurrentOrganizationRef();
 
-    const { data: orgs, error, isLoading, mutate } = useCDSOrganizations(isCDSEnabled);
-    const [ isSyncing, setIsSyncing ] = useState<boolean>(false);
+    const { data: orgs, error, isLoading } = useCDSOrganizations(isCDSEnabled);
 
     useEffect(() => {
         if (!error) return;
@@ -81,37 +74,10 @@ const OrganizationsBox: FunctionComponent<OrganizationsBoxPropsInterface> = ({
         [ orgs, currentRef?.id, currentRef?.handle, isSubOrganization ]
     );
     const root: CDSOrganization | undefined = useMemo(
-        () => (orgs ?? []).find((org: CDSOrganization) => org.depth === 0),
+        () => (orgs ?? []).find((org: CDSOrganization) => !org.parent_org_id),
         [ orgs ]
     );
-    const below: CDSOrganization[] = useMemo(() => descendantsOf(orgs, current), [ orgs, current ]);
-
-    const handleSync = async (): Promise<void> => {
-        setIsSyncing(true);
-
-        try {
-            const result: CDSReconcileResult = await reconcileOrganizations();
-
-            dispatch(addAlert({
-                description: t("customerDataService:b2b.organizations.notifications.sync.success.description", {
-                    added: result?.added?.length ?? 0,
-                    deleted: result?.deleted?.length ?? 0,
-                    total: result?.total ?? 0
-                }),
-                level: AlertLevels.SUCCESS,
-                message: t("customerDataService:b2b.organizations.notifications.sync.success.message")
-            }));
-            mutate();
-        } catch {
-            dispatch(addAlert({
-                description: t("customerDataService:b2b.organizations.notifications.sync.error.description"),
-                level: AlertLevels.ERROR,
-                message: t("customerDataService:b2b.organizations.notifications.sync.error.message")
-            }));
-        } finally {
-            setIsSyncing(false);
-        }
-    };
+    const below: CDSOrganizationNode[] = useMemo(() => descendantsOf(orgs, current), [ orgs, current ]);
 
     const renderDescription = (): ReactElement => {
         if (isSubOrganization) {
@@ -155,17 +121,17 @@ const OrganizationsBox: FunctionComponent<OrganizationsBoxPropsInterface> = ({
                     </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                    { below.map((org: CDSOrganization) => (
+                    { below.map((org: CDSOrganizationNode) => (
                         <Table.Row key={ org.org_id } data-componentid={ `${ componentId }-row-${ org.org_handle }` }>
                             <Table.Cell>
-                                <span style={ { paddingLeft: `${ (org.depth - (current?.depth ?? 0) - 1) * 20 }px` } }>
+                                <span style={ { paddingLeft: `${ (org.level - 1) * 20 }px` } }>
                                     <Icon name="building outline" color="grey" />
                                     { organizationLabel(org) }
                                 </span>
                             </Table.Cell>
                             <Table.Cell><code>{ org.org_handle }</code></Table.Cell>
                             <Table.Cell>
-                                { t("customerDataService:b2b.organizations.level.child", { depth: org.depth }) }
+                                { t("customerDataService:b2b.organizations.level.child", { level: org.level }) }
                             </Table.Cell>
                             <Table.Cell>
                                 <Label size="mini" color={ org.status === "ACTIVE" ? "green" : "grey" } basic>
@@ -196,23 +162,6 @@ const OrganizationsBox: FunctionComponent<OrganizationsBoxPropsInterface> = ({
             { isCDSEnabled && (
                 <>
                     { isLoading ? <Icon loading name="spinner" /> : renderTable() }
-                    { !isSubOrganization && canUpdate && (
-                        <>
-                            <Button
-                                basic
-                                size="small"
-                                icon="sync"
-                                content={ t("customerDataService:b2b.organizations.syncButton") }
-                                loading={ isSyncing }
-                                disabled={ isSyncing }
-                                onClick={ handleSync }
-                                data-componentid={ `${ componentId }-sync-button` }
-                            />
-                            <p className="hint-description" style={ { marginTop: "6px" } }>
-                                { t("customerDataService:b2b.organizations.syncHint") }
-                            </p>
-                        </>
-                    ) }
                 </>
             ) }
         </EmphasizedSegment>

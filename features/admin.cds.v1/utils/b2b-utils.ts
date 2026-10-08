@@ -19,7 +19,7 @@
 import { OrganizationType } from "@wso2is/admin.core.v1/constants/organization-constants";
 import { AppState } from "@wso2is/admin.core.v1/store";
 import { useSelector } from "react-redux";
-import type { CDSOrganization, ShareTarget } from "../models/b2b";
+import type { CDSOrganization, CDSOrganizationNode } from "../models/b2b";
 
 /**
  * Hook that tells whether the Console runs in a sub organization.
@@ -67,25 +67,43 @@ export const findCurrentOrganization = (
 
     if (match) return match;
 
-    return isSubOrganization ? undefined : orgs.find((org: CDSOrganization) => org.depth === 0);
+    return isSubOrganization ? undefined : orgs.find((org: CDSOrganization) => !org.parent_org_id);
 };
 
 const isActive = (org: CDSOrganization): boolean => org.status === "ACTIVE";
 
 /**
- * Returns the active organizations below the given organization, in tree order.
+ * Returns the active organizations below the given organization, in tree order: each organization
+ * comes before its children, and the children of an organization are sorted by name. CDS stores no
+ * path, so the order comes from the parent links. The level is 1 for a direct child.
  *
  * @param orgs - The organizations of the tree.
  * @param parent - The organization.
- * @returns The descendants.
+ * @returns The descendants, with their level below the organization.
  */
-export const descendantsOf = (orgs: CDSOrganization[], parent: CDSOrganization): CDSOrganization[] => {
+export const descendantsOf = (orgs: CDSOrganization[], parent: CDSOrganization): CDSOrganizationNode[] => {
     if (!parent) return [];
 
-    return (orgs ?? [])
-        .filter((org: CDSOrganization) =>
-            isActive(org) && org.org_id !== parent.org_id && org.path?.startsWith(parent.path))
-        .sort((a: CDSOrganization, b: CDSOrganization) => a.path.localeCompare(b.path));
+    const children: Map<string, CDSOrganization[]> = new Map<string, CDSOrganization[]>();
+
+    (orgs ?? []).filter(isActive).forEach((org: CDSOrganization) => {
+        if (!org.parent_org_id) return;
+        children.set(org.parent_org_id, [ ...(children.get(org.parent_org_id) ?? []), org ]);
+    });
+    children.forEach((list: CDSOrganization[]) => list.sort((a: CDSOrganization, b: CDSOrganization) =>
+        organizationLabel(a).localeCompare(organizationLabel(b))));
+
+    const result: CDSOrganizationNode[] = [];
+    const visit = (org: CDSOrganization, level: number): void => {
+        (children.get(org.org_id) ?? []).forEach((child: CDSOrganization) => {
+            result.push({ ...child, level });
+            visit(child, level + 1);
+        });
+    };
+
+    visit(parent, 1);
+
+    return result;
 };
 
 /**
@@ -95,43 +113,26 @@ export const descendantsOf = (orgs: CDSOrganization[], parent: CDSOrganization):
  * @param parent - The organization.
  * @returns The direct children.
  */
-export const childrenOf = (orgs: CDSOrganization[], parent: CDSOrganization): CDSOrganization[] =>
-    descendantsOf(orgs, parent).filter((org: CDSOrganization) => org.parent_org_id === parent.org_id);
+export const childrenOf = (orgs: CDSOrganization[], parent: CDSOrganization): CDSOrganizationNode[] =>
+    descendantsOf(orgs, parent).filter((org: CDSOrganizationNode) => org.level === 1);
 
 /**
- * Returns the organizations that a set of targets reaches, before the exclusions.
- * This is the same rule as the share engine of CDS.
+ * Returns the IDs of the ancestors of an organization, up to the root, from the parent links.
  *
  * @param orgs - The organizations of the tree.
- * @param initiator - The organization that shares.
- * @param targets - The targets of the share.
- * @returns The organizations in the reach.
+ * @param org - The organization.
+ * @returns The IDs of the parent, the parent of the parent, and so on.
  */
-export const reachOf = (
-    orgs: CDSOrganization[],
-    initiator: CDSOrganization,
-    targets: ShareTarget[]
-): CDSOrganization[] => {
-    const below: CDSOrganization[] = descendantsOf(orgs, initiator);
-    const reached: Map<string, CDSOrganization> = new Map<string, CDSOrganization>();
+export const ancestorIdsOf = (orgs: CDSOrganization[], org: CDSOrganization): string[] => {
+    const byId: Map<string, CDSOrganization> = new Map<string, CDSOrganization>(
+        (orgs ?? []).map((o: CDSOrganization) => [ o.org_id, o ]));
+    const result: string[] = [];
 
-    targets.forEach((target: ShareTarget) => {
-        if (target.scope === "ALL_DESCENDANTS") {
-            below.forEach((org: CDSOrganization) => reached.set(org.org_id, org));
+    for (let id: string = org?.parent_org_id; id && result.length < 64; id = byId.get(id)?.parent_org_id) {
+        result.push(id);
+    }
 
-            return;
-        }
-        const child: CDSOrganization | undefined = below.find((org: CDSOrganization) =>
-            org.org_id === target.org_id && org.parent_org_id === initiator.org_id);
-
-        if (!child) return;
-        reached.set(child.org_id, child);
-        if (target.scope === "ORG_SUBTREE") {
-            descendantsOf(orgs, child).forEach((org: CDSOrganization) => reached.set(org.org_id, org));
-        }
-    });
-
-    return below.filter((org: CDSOrganization) => reached.has(org.org_id));
+    return result;
 };
 
 /**

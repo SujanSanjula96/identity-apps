@@ -18,12 +18,22 @@
 
 import { getApplicationList } from "@wso2is/admin.applications.v1/api/application";
 import {
+    AdvancedConfigurationsInterface,
     ApplicationListInterface,
-    ApplicationListItemInterface
+    ApplicationListItemInterface,
+    additionalSpProperty
 } from "@wso2is/admin.applications.v1/models/application";
 import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CDSApplicationIdentifierType } from "../models/config";
 import { getCDSApplicationIdentifierType } from "../utils/application-identifier-utils";
+
+/**
+ * An item of the application list with its advanced configurations, which the list returns when
+ * the request asks for them. A shared app of a sub organization has the main app properties there.
+ */
+type ApplicationListItem = ApplicationListItemInterface & {
+    advancedConfigurations?: AdvancedConfigurationsInterface;
+};
 
 /**
  * An application enriched with the identifier used when communicating with CDS APIs.
@@ -70,9 +80,9 @@ const APPLICATION_LIST_PAGE_SIZE: number = 100;
  *
  * @returns All applications with client ID and issuer attributes.
  */
-const fetchAllApplications: () => Promise<ApplicationListItemInterface[]> =
-    async (): Promise<ApplicationListItemInterface[]> => {
-        const allApplications: ApplicationListItemInterface[] = [];
+const fetchAllApplications: () => Promise<ApplicationListItem[]> =
+    async (): Promise<ApplicationListItem[]> => {
+        const allApplications: ApplicationListItem[] = [];
         let offset: number = 0;
         let totalResults: number = 0;
 
@@ -82,9 +92,9 @@ const fetchAllApplications: () => Promise<ApplicationListItemInterface[]> =
                 offset,
                 null,
                 true,
-                "clientId,issuer"
+                "advancedConfigurations,clientId,issuer"
             );
-            const pageApplications: ApplicationListItemInterface[] = page?.applications ?? [];
+            const pageApplications: ApplicationListItem[] = (page?.applications ?? []) as ApplicationListItem[];
 
             if (pageApplications.length === 0) {
                 break;
@@ -97,6 +107,28 @@ const fetchAllApplications: () => Promise<ApplicationListItemInterface[]> =
 
         return allApplications;
     };
+
+/**
+ * Returns the identifier of the main app of a shared (fragment) app of a sub organization. CDS keys
+ * the application data of a shared app by the main app in every organization (R-016). The CDS IS
+ * extension adds the main app ID and client ID to each shared app.
+ *
+ * @param app - The application.
+ * @param identifierType - The identifier type of the deployment.
+ * @returns The identifier of the main app, or undefined for an app that is not shared.
+ */
+const mainApplicationIdentifierOf = (app: ApplicationListItem,
+    identifierType: CDSApplicationIdentifierType): string | undefined => {
+    if (!app?.advancedConfigurations?.fragment) {
+        return undefined;
+    }
+    const name: string = identifierType === CDSApplicationIdentifierType.APP_ID
+        ? "mainApplicationId"
+        : "mainApplicationClientId";
+
+    return app.advancedConfigurations.additionalSpProperties
+        ?.find((property: additionalSpProperty) => property.name === name)?.value;
+};
 
 /**
  * Hook to fetch applications for CDS application data operations.
@@ -112,7 +144,7 @@ export const useCDSApplications = (shouldFetch: boolean = true): UseCDSApplicati
 
     const identifierType: CDSApplicationIdentifierType = getCDSApplicationIdentifierType();
 
-    const [ applicationList, setApplicationList ] = useState<ApplicationListItemInterface[]>([]);
+    const [ applicationList, setApplicationList ] = useState<ApplicationListItem[]>([]);
     const [ isLoading, setIsLoading ] = useState<boolean>(shouldFetch);
     const hasFetchedRef: MutableRefObject<boolean> = useRef<boolean>(false);
 
@@ -128,7 +160,7 @@ export const useCDSApplications = (shouldFetch: boolean = true): UseCDSApplicati
         setIsLoading(true);
 
         fetchAllApplications()
-            .then((fetchedApplications: ApplicationListItemInterface[]): void => {
+            .then((fetchedApplications: ApplicationListItem[]): void => {
                 if (!isCancelled) {
                     setApplicationList(fetchedApplications);
                 }
@@ -151,11 +183,12 @@ export const useCDSApplications = (shouldFetch: boolean = true): UseCDSApplicati
 
     const applications: CDSApplicationInterface[] = useMemo((): CDSApplicationInterface[] => {
         return applicationList
-            .map((app: ApplicationListItemInterface): CDSApplicationInterface => ({
+            .map((app: ApplicationListItem): CDSApplicationInterface => ({
                 id: app.id ?? "",
-                identifier: identifierType === CDSApplicationIdentifierType.APP_ID
-                    ? app.id ?? ""
-                    : app.clientId || app.issuer || "",
+                identifier: mainApplicationIdentifierOf(app, identifierType)
+                    ?? (identifierType === CDSApplicationIdentifierType.APP_ID
+                        ? app.id ?? ""
+                        : app.clientId || app.issuer || ""),
                 name: app.name
             }))
             .filter((app: CDSApplicationInterface): boolean => Boolean(app.identifier));
@@ -166,10 +199,17 @@ export const useCDSApplications = (shouldFetch: boolean = true): UseCDSApplicati
     const displayNamesByIdentifier: Map<string, string> = useMemo((): Map<string, string> => {
         const names: Map<string, string> = new Map<string, string>();
 
-        applicationList.forEach((app: ApplicationListItemInterface): void => {
+        applicationList.forEach((app: ApplicationListItem): void => {
             if (app.id) names.set(app.id, app.name);
             if (app.clientId) names.set(app.clientId, app.name);
             if (app.issuer) names.set(app.issuer, app.name);
+            // A shared app of a sub organization: the data is keyed by the main app.
+            [ "mainApplicationId", "mainApplicationClientId" ].forEach((name: string) => {
+                const value: string = app.advancedConfigurations?.additionalSpProperties
+                    ?.find((property: additionalSpProperty) => property.name === name)?.value;
+
+                if (app.advancedConfigurations?.fragment && value) names.set(value, app.name);
+            });
         });
 
         return names;

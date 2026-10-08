@@ -25,6 +25,28 @@ import { CustomerDataServiceNS } from "../../../models";
 
 export const customerDataService: CustomerDataServiceNS = {
     b2b: {
+        organizationAccess: {
+            description: "Select the sub organizations that can use Customer Data Service. With no selection, only this organization uses it.",
+            heading: "Organization access",
+            modeChangeWarning: "A change between all and selected sub organizations removes the selection and creates a new one. For a moment, no sub organization can use Customer Data Service.",
+            notifications: {
+                error: {
+                    description: "Could not save the organization access.",
+                    message: "Organization access error"
+                },
+                success: {
+                    description: "The sub organizations that can use Customer Data Service are saved.",
+                    message: "Organization access saved"
+                }
+            },
+            options: {
+                all: "All sub organizations",
+                none: "This organization only",
+                selected: "Selected sub organizations",
+                selectedHint: "When you select an organization, the organizations above it are also selected."
+            },
+            save: "Save"
+        },
         organizations: {
             columns: {
                 handle: "Handle",
@@ -33,14 +55,14 @@ export const customerDataService: CustomerDataServiceNS = {
                 status: "Status"
             },
             description: {
-                disabled: "When you enable Customer Data Service, it is enabled for this organization and for all its sub organizations.",
-                root: "Customer Data Service is enabled for this organization and for all its sub organizations. A new sub organization gets it automatically.",
+                disabled: "When you enable Customer Data Service, it is enabled for this organization. Then select the sub organizations that can use it.",
+                root: "The sub organizations that Customer Data Service knows. The organization access above selects the ones that can use it.",
                 subOrganization: "This organization gets Customer Data Service from its root organization {{rootName}}. Only the root organization can enable or disable it."
             },
             empty: "This organization has no sub organizations.",
             heading: "Organizations",
             level: {
-                child: "Level {{depth}}",
+                child: "Level {{level}}",
                 current: "This organization",
                 root: "Root"
             },
@@ -50,16 +72,6 @@ export const customerDataService: CustomerDataServiceNS = {
                         description: "Could not get the organizations from Customer Data Service.",
                         message: "Something went wrong"
                     }
-                },
-                sync: {
-                    error: {
-                        description: "Could not sync the organizations. Try again.",
-                        message: "Sync error"
-                    },
-                    success: {
-                        description: "Customer Data Service knows {{total}} organizations. Added: {{added}}. Removed: {{deleted}}.",
-                        message: "Organizations synced"
-                    }
                 }
             },
             status: {
@@ -67,8 +79,6 @@ export const customerDataService: CustomerDataServiceNS = {
                 DELETED: "Deleted",
                 DISABLED: "Disabled"
             },
-            syncButton: "Sync organizations",
-            syncHint: "Customer Data Service gets organization changes from events. Sync to read the full organization tree again.",
             toggleHint: "Only the root organization can change this setting."
         },
         sharing: {
@@ -77,11 +87,6 @@ export const customerDataService: CustomerDataServiceNS = {
                 share: "Share"
             },
             description: "A sub organization can use a shared {{resource}}, but it cannot change it.",
-            exclusions: {
-                hint: "Customer Data Service does not share with an excluded organization or with the organizations below it.",
-                label: "Exclude organizations",
-                placeholder: "Select organizations"
-            },
             heading: "Share with sub organizations",
             includeSubOrganizations: "Include its sub organizations",
             modal: {
@@ -89,7 +94,7 @@ export const customerDataService: CustomerDataServiceNS = {
                 subheader: "Share the rule {{ruleName}} with sub organizations."
             },
             noChildren: "This organization has no sub organizations to share with.",
-            notShareable: "In this version, you can share only traits attributes that are not complex.",
+            notShareable: "In this version, you can share only traits and application data attributes that are not complex and are not sub-attributes. Only the root organization can share application data attributes.",
             notifications: {
                 error: {
                     description: "Could not save the share settings.",
@@ -128,8 +133,11 @@ export const customerDataService: CustomerDataServiceNS = {
                     state: "State"
                 },
                 empty: "The share does not reach any organization.",
+                enabledOnly: "Only the sub organizations that can use Customer Data Service show here.",
                 heading: "Share status",
+                page: "{{from}}-{{to}} of {{total}}",
                 reasons: {
+                    APP_NOT_SHARED: "The application is not shared with the organization.",
                     LOCAL_NAME_CONFLICT: "The organization has its own {{resource}} with the same name.",
                     MISSING_ATTRIBUTE: "The organization cannot see an attribute with the name and the type of the rule.",
                     SHARED_NAME_CONFLICT: "Another shared {{resource}} with the same name is active in the organization."
@@ -137,6 +145,7 @@ export const customerDataService: CustomerDataServiceNS = {
                 states: {
                     ACTIVE: "Active",
                     CONFLICTED: "Conflict",
+                    INACTIVE_APP_NOT_SHARED: "Inactive",
                     INACTIVE_MISSING_ATTRIBUTE: "Inactive"
                 }
             },
@@ -176,7 +185,7 @@ export const customerDataService: CustomerDataServiceNS = {
         backButton: "Go back to Customer Data",
         configuration: {
             organizationSettings: {
-                description: "View the organizations that use Customer Data Service",
+                description: "Select the sub organizations that use Customer Data Service",
                 title: "Organization Settings"
             },
             profileAttributes: {
@@ -214,7 +223,7 @@ export const customerDataService: CustomerDataServiceNS = {
     },
     organizationSettings: {
         page: {
-            description: "View the organizations that use Customer Data Service and sync the organization tree",
+            description: "Select the sub organizations that can use Customer Data Service",
             title: "Organization Settings"
         }
     },

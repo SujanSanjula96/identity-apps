@@ -22,33 +22,71 @@ import useRequest, {
     RequestResultInterface
 } from "@wso2is/admin.core.v1/hooks/use-request";
 import { HttpMethods } from "@wso2is/core/models";
-import { getShareEndpoint } from "../api/b2b";
-import type { SharePolicy, ShareableResource } from "../models/b2b";
+import { getSharePolicyEndpoint, getSharingPoliciesEndpoint } from "../api/b2b";
+import type { SharePolicyList, SharePolicyWithStates, ShareableResource } from "../models/b2b";
+
+const JSON_HEADERS: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json"
+};
 
 /**
- * Hook to fetch the share policy of a profile attribute or a unification rule (B2B).
- * CDS returns HTTP 404 when the resource has no share policy.
+ * Hook to list the share policies of a profile attribute or a unification rule (B2B). The list
+ * has a maximum of one policy: the policy of the current organization.
  *
  * @param resource - The resource.
  * @param shouldFetch - Should fetch the data.
  * @returns SWR response object containing the data, error, isLoading, isValidating, mutate.
  */
-const useSharePolicy = <Data = SharePolicy, Error = RequestErrorInterface>(
+export const useSharePolicies = <Data = SharePolicyList, Error = RequestErrorInterface>(
     resource: ShareableResource,
     shouldFetch: boolean = true
 ): RequestResultInterface<Data, Error> => {
 
     const requestConfig: RequestConfigInterface = {
-        headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json"
-        },
+        headers: JSON_HEADERS,
         method: HttpMethods.GET,
-        url: resource ? getShareEndpoint(resource) : null
+        url: resource ? getSharingPoliciesEndpoint(resource) : null
     };
 
     const { data, error, isLoading, isValidating, mutate } = useRequest<Data, Error>(
         shouldFetch && resource ? requestConfig : null,
+        { shouldRetryOnError: false }
+    );
+
+    return {
+        data: (data) as Data,
+        error,
+        isLoading,
+        isValidating,
+        mutate
+    };
+};
+
+/**
+ * Hook to fetch one share policy with one page of the state of the resource in each organization.
+ *
+ * @param resource - The resource.
+ * @param policyId - The ID of the policy. Nothing is fetched without it.
+ * @param limit - The page size.
+ * @param offset - The first state of the page.
+ * @returns SWR response object containing the data, error, isLoading, isValidating, mutate.
+ */
+const useSharePolicy = <Data = SharePolicyWithStates, Error = RequestErrorInterface>(
+    resource: ShareableResource,
+    policyId: string,
+    limit: number,
+    offset: number
+): RequestResultInterface<Data, Error> => {
+
+    const requestConfig: RequestConfigInterface = {
+        headers: JSON_HEADERS,
+        method: HttpMethods.GET,
+        url: resource && policyId ? getSharePolicyEndpoint(resource, policyId, limit, offset) : null
+    };
+
+    const { data, error, isLoading, isValidating, mutate } = useRequest<Data, Error>(
+        resource && policyId ? requestConfig : null,
         { shouldRetryOnError: false }
     );
 

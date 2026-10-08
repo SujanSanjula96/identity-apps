@@ -59,6 +59,7 @@ import {
     ProfileSchemaSubAttributeRef,
     ValueType
 } from "../models/profile-attributes";
+import { useIsSubOrganization } from "../utils/b2b-utils";
 import { stripScopePrefix } from "../utils/profile-attribute-utils";
 
 const FORM_ID: string = "profile-attribute-edit-form";
@@ -180,8 +181,12 @@ const ProfileAttributeEditPage: FunctionComponent<RouteComponentProps<RouteParam
     const [ _modalAlert, setModalAlert, modalAlertComponent ] = useConfirmationModalAlert();
     // B2B: an attribute that an ancestor organization shares is read-only here.
     const isShared: boolean = attribute?.origin === "SHARED";
-    // B2B: in this version, only traits attributes that are not complex can be shared.
-    const isShareable: boolean = scope === "traits" && attribute?.value_type !== "complex";
+    const isSubOrganization: boolean = useIsSubOrganization();
+    // B2B: in this version, traits attributes and (from the root only) application data attributes can
+    // be shared, when they are not complex and not sub-attributes.
+    const canShareScope: boolean = scope === "traits" || (scope === "application_data" && !isSubOrganization);
+    const isShareable: boolean = canShareScope && attribute?.value_type !== "complex"
+        && (attribute?.attribute_name ?? "").split(".").length <= 2;
     const showDangerZone: boolean = (scope === "traits" || scope === "application_data") && !isShared;
 
     const handleTabChange = (_: SyntheticEvent, data: TabProps): void => {
@@ -839,7 +844,7 @@ const ProfileAttributeEditPage: FunctionComponent<RouteComponentProps<RouteParam
                 render: renderGeneralTab
             },
             // B2B: the owner organization shares the attribute with its sub organizations.
-            ...(scope === "traits" && attribute && !isShared
+            ...(canShareScope && attribute && !isShared
                 ? [ {
                     componentId: "sharing",
                     menuItem: t("customerDataService:b2b.sharing.tab"),
@@ -856,7 +861,9 @@ const ProfileAttributeEditPage: FunctionComponent<RouteComponentProps<RouteParam
             isDeleting,
             isLoadingSubAttrs,
             currentValueType,
-            getApplicationDisplayName
+            getApplicationDisplayName,
+            canShareScope,
+            isShareable
         ]
     );
 

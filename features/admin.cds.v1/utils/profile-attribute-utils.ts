@@ -218,11 +218,13 @@ export const toProfileSchemaListingRows = (schema: ProfileSchemaFullResponse): P
                 attribute_name: fullName,
                 belongs_to: appId,
                 chip_label: getScopeLabel("application_data"),
-                deletable: true,
+                deletable: a.origin !== "SHARED",
                 display_name: fieldPath || fullName,
                 editable: true,
                 id: rowId("application_data", fullName, a.attribute_id),
-                scope: "application_data"
+                scope: "application_data",
+                // B2B: a shared attribute shows the Shared chip with its owner.
+                shared_by: a.origin === "SHARED" ? a.owner_org_handle : undefined
             });
         });
     });

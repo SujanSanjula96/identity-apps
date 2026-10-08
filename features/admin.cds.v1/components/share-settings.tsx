@@ -25,10 +25,9 @@ import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { Dispatch } from "redux";
 import {
+    Button,
     Checkbox,
     Divider,
-    Dropdown,
-    DropdownItemProps,
     Form,
     Header,
     Icon,
@@ -38,22 +37,21 @@ import {
     SemanticCOLORS,
     Table
 } from "semantic-ui-react";
-import { deleteSharePolicy, putSharePolicy } from "../api/b2b";
+import { createSharePolicy, deleteSharePolicy, listSharePolicies, updateSharePolicy } from "../api/b2b";
 import useCDSOrganizations from "../hooks/use-cds-organizations";
-import useSharePolicy from "../hooks/use-share-policy";
+import useSharePolicy, { useSharePolicies } from "../hooks/use-share-policy";
 import {
     CDSOrganization,
-    SharePolicy,
-    ShareRequest,
+    SharePolicyRequest,
     ShareState,
-    ShareTarget,
-    ShareableResource
+    ShareableResource,
+    TargetChildOrg,
+    TargetOrgScope
 } from "../models/b2b";
 import {
     childrenOf,
     findCurrentOrganization,
     organizationLabel,
-    reachOf,
     useCurrentOrganizationRef,
     useIsSubOrganization
 } from "../utils/b2b-utils";
@@ -78,14 +76,21 @@ interface ShareSettingsPropsInterface extends IdentifiableComponentInterface {
 const STATE_COLORS: Record<string, SemanticCOLORS> = {
     ACTIVE: "green",
     CONFLICTED: "orange",
+    INACTIVE_APP_NOT_SHARED: "grey",
     INACTIVE_MISSING_ATTRIBUTE: "grey"
 };
+
+// The page size of the state table.
+const STATES_PAGE_SIZE: number = 20;
+
+// CDS returns this code for a second policy of the same organization.
+const POLICY_EXISTS_CODE: string = "CDS-17008";
 
 /**
  * Share settings of a profile attribute or a unification rule (B2B). The admin shares with
  * all sub organizations, or with selected direct children (with or without their sub
- * organizations), and can exclude organizations. The status table shows the state of the
- * resource in each organization that the share reaches.
+ * organizations). The status table shows the state of the resource in each organization that
+ * the share reaches, one page at a time.
  */
 const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
     resource,
@@ -100,20 +105,26 @@ const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
     const currentRef: { id: string; handle: string } = useCurrentOrganizationRef();
     const resourceLabel: string = t(`customerDataService:b2b.sharing.resource.${ resource.type }`);
 
+    const [ offset, setOffset ] = useState<number>(0);
+
     const { data: orgs, isLoading: isOrgsLoading } = useCDSOrganizations(true);
     const {
+        data: policies,
+        isLoading: isPoliciesLoading,
+        mutate: mutatePolicies
+    } = useSharePolicies(resource, true);
+    // The list has a maximum of one policy: the policy of the current organization.
+    const policyId: string = policies?.policies?.[0]?.id;
+    const {
         data: policy,
-        error: policyError,
         isLoading: isPolicyLoading,
         mutate: mutatePolicy
-    } = useSharePolicy(resource, true);
+    } = useSharePolicy(resource, policyId, STATES_PAGE_SIZE, offset);
 
-    // CDS returns HTTP 404 when the resource has no share policy.
-    const hasPolicy: boolean = Boolean(policy?.policy_id) && !policyError;
+    const hasPolicy: boolean = Boolean(policyId);
 
     const [ mode, setMode ] = useState<ShareMode>("none");
     const [ selected, setSelected ] = useState<Record<string, boolean>>({});
-    const [ excluded, setExcluded ] = useState<string[]>([]);
     const [ isSaving, setIsSaving ] = useState<boolean>(false);
     const [ problem, setProblem ] = useState<string>(null);
 
@@ -122,62 +133,41 @@ const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
         [ orgs, currentRef?.id, currentRef?.handle, isSubOrganization ]
     );
     const children: CDSOrganization[] = useMemo(() => childrenOf(orgs, current), [ orgs, current ]);
+    const scope: TargetOrgScope = policies?.policies?.[0]?.target_org_scope;
     const orgsById: Map<string, CDSOrganization> = useMemo(
         () => new Map((orgs ?? []).map((org: CDSOrganization) => [ org.org_id, org ])),
         [ orgs ]
     );
 
     // Load the form from the stored policy. "selected" maps a child to true when the share
-    // includes its sub organizations (ORG_SUBTREE), and to false for the child only (ORG).
+    // includes its sub organizations (all_children of the child), and to false for the child only.
     useEffect(() => {
-        if (isPolicyLoading) return;
-        if (!hasPolicy) {
+        if (isPoliciesLoading) return;
+        if (!scope) {
             setMode("none");
             setSelected({});
-            setExcluded([]);
 
             return;
         }
-        const all: boolean = policy.targets?.some((target: ShareTarget) => target.scope === "ALL_DESCENDANTS");
         const picked: Record<string, boolean> = {};
 
-        policy.targets?.forEach((target: ShareTarget) => {
-            if (target.org_id) picked[target.org_id] = target.scope === "ORG_SUBTREE";
+        scope.child_orgs?.forEach((child: TargetChildOrg) => {
+            picked[child.org_id] = Boolean(child.all_children);
         });
-        setMode(all ? "all" : "selected");
+        setMode(scope.all_children ? "all" : "selected");
         setSelected(picked);
-        setExcluded(policy.excluded_org_ids ?? []);
-    }, [ policy, hasPolicy, isPolicyLoading ]);
+    }, [ scope, isPoliciesLoading ]);
 
-    const targets: ShareTarget[] = useMemo((): ShareTarget[] => {
-        if (mode === "all") return [ { scope: "ALL_DESCENDANTS" } ];
-        if (mode === "selected") {
-            return Object.entries(selected).map(([ orgId, withSubtree ]: [ string, boolean ]) => ({
-                org_id: orgId,
-                scope: withSubtree ? "ORG_SUBTREE" : "ORG"
-            }));
-        }
+    const payload: SharePolicyRequest = useMemo((): SharePolicyRequest => {
+        if (mode === "all") return { target_org_scope: { all_children: true } };
 
-        return [];
+        return {
+            target_org_scope: {
+                child_orgs: Object.entries(selected).map(([ orgId, withSubtree ]: [ string, boolean ]) =>
+                    withSubtree ? { all_children: true, org_id: orgId } : { org_id: orgId })
+            }
+        };
     }, [ mode, selected ]);
-
-    const exclusionOptions: DropdownItemProps[] = useMemo(
-        () => (current ? reachOf(orgs, current, targets) : []).map((org: CDSOrganization) => ({
-            key: org.org_id,
-            text: `${ organizationLabel(org) } (${ org.org_handle })`,
-            value: org.org_id
-        })),
-        [ orgs, current, targets ]
-    );
-
-    // Drop exclusions that are not in the reach any more.
-    useEffect(() => {
-        const valid: Set<string> = new Set(exclusionOptions.map((option: DropdownItemProps) => option.value as string));
-
-        if (excluded.some((id: string) => !valid.has(id))) {
-            setExcluded(excluded.filter((id: string) => valid.has(id)));
-        }
-    }, [ exclusionOptions ]);
 
     const toggleChild = (orgId: string, checked: boolean): void => {
         const next: Record<string, boolean> = { ...selected };
@@ -194,6 +184,28 @@ const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
         setSelected({ ...selected, [ orgId ]: withSubtree });
     };
 
+    // Creates the policy, or replaces its targets. When another tab created the policy first, CDS
+    // returns HTTP 409, and the targets of that policy are replaced.
+    const saveSharePolicy = async (): Promise<void> => {
+        if (hasPolicy) {
+            await updateSharePolicy(resource, policyId, payload);
+
+            return;
+        }
+
+        try {
+            await createSharePolicy(resource, payload);
+        } catch (error) {
+            if ((error as AxiosError<{ code?: string }>)?.response?.data?.code !== POLICY_EXISTS_CODE) {
+                throw error;
+            }
+            const existing: string = (await listSharePolicies(resource))?.policies?.[0]?.id;
+
+            if (!existing) throw error;
+            await updateSharePolicy(resource, existing, payload);
+        }
+    };
+
     const handleSave = async (): Promise<void> => {
         setProblem(null);
         setIsSaving(true);
@@ -201,7 +213,7 @@ const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
         try {
             if (mode === "none") {
                 if (hasPolicy) {
-                    await deleteSharePolicy(resource);
+                    await deleteSharePolicy(resource, policyId);
                 }
                 dispatch(addAlert({
                     description: t("customerDataService:b2b.sharing.notifications.stopped.description",
@@ -210,9 +222,7 @@ const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
                     message: t("customerDataService:b2b.sharing.notifications.stopped.message")
                 }));
             } else {
-                const payload: ShareRequest = { excluded_org_ids: excluded, targets };
-
-                await putSharePolicy(resource, payload);
+                await saveSharePolicy();
                 dispatch(addAlert({
                     description: t("customerDataService:b2b.sharing.notifications.success.description",
                         { resource: resourceLabel }),
@@ -220,6 +230,8 @@ const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
                     message: t("customerDataService:b2b.sharing.notifications.success.message")
                 }));
             }
+            setOffset(0);
+            await mutatePolicies();
             await mutatePolicy();
             onUpdate?.();
         } catch (error) {
@@ -242,15 +254,15 @@ const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
 
     const renderStatus = (): ReactElement => {
         if (!hasPolicy) return null;
-        const states: ShareState[] = [ ...(policy as SharePolicy).states ?? [] ].sort(
-            (a: ShareState, b: ShareState) =>
-                (orgsById.get(a.org_id)?.path ?? "").localeCompare(orgsById.get(b.org_id)?.path ?? "")
-        );
+        // CDS sorts the states by the level of the organization, and then by the handle.
+        const states: ShareState[] = policy?.states ?? [];
+        const total: number = policy?.total_states ?? 0;
 
         return (
             <>
                 <Divider />
                 <Header as="h5">{ t("customerDataService:b2b.sharing.status.heading") }</Header>
+                <Hint>{ t("customerDataService:b2b.sharing.status.enabledOnly") }</Hint>
                 { states.length === 0 ? (
                     <p>{ t("customerDataService:b2b.sharing.status.empty") }</p>
                 ) : (
@@ -298,15 +310,43 @@ const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
                         </Table.Body>
                     </Table>
                 ) }
+                { total > STATES_PAGE_SIZE && (
+                    <div data-componentid={ `${ componentId }-status-pages` }>
+                        <Button
+                            basic
+                            size="mini"
+                            icon="angle left"
+                            disabled={ offset === 0 }
+                            onClick={ () => setOffset(Math.max(0, offset - STATES_PAGE_SIZE)) }
+                            data-componentid={ `${ componentId }-status-previous` }
+                        />
+                        <span style={ { margin: "0 1em" } }>
+                            { t("customerDataService:b2b.sharing.status.page", {
+                                from: offset + 1,
+                                to: Math.min(offset + STATES_PAGE_SIZE, total),
+                                total
+                            }) }
+                        </span>
+                        <Button
+                            basic
+                            size="mini"
+                            icon="angle right"
+                            disabled={ offset + STATES_PAGE_SIZE >= total }
+                            onClick={ () => setOffset(offset + STATES_PAGE_SIZE) }
+                            data-componentid={ `${ componentId }-status-next` }
+                        />
+                    </div>
+                ) }
             </>
         );
     };
 
-    if (isOrgsLoading || isPolicyLoading) {
+    if (isOrgsLoading || isPoliciesLoading || (hasPolicy && isPolicyLoading && !policy)) {
         return <Icon loading name="spinner" />;
     }
 
-    const isSaveDisabled: boolean = readOnly || isSaving || (mode === "selected" && targets.length === 0)
+    const isSaveDisabled: boolean = readOnly || isSaving
+        || (mode === "selected" && Object.keys(selected).length === 0)
         || (mode === "none" && !hasPolicy);
 
     return (
@@ -388,25 +428,6 @@ const ShareSettings: FunctionComponent<ShareSettingsPropsInterface> = ({
                                 );
                             }) }
                         </div>
-                    ) }
-                    { mode !== "none" && exclusionOptions.length > 0 && (
-                        <Form.Field width={ 10 }>
-                            <label>{ t("customerDataService:b2b.sharing.exclusions.label") }</label>
-                            <Dropdown
-                                multiple
-                                search
-                                selection
-                                clearable
-                                placeholder={ t("customerDataService:b2b.sharing.exclusions.placeholder") }
-                                options={ exclusionOptions }
-                                value={ excluded }
-                                disabled={ readOnly }
-                                onChange={ (_: unknown, data: { value?: unknown }) =>
-                                    setExcluded((data.value as string[]) ?? []) }
-                                data-componentid={ `${ componentId }-exclusions` }
-                            />
-                            <Hint>{ t("customerDataService:b2b.sharing.exclusions.hint") }</Hint>
-                        </Form.Field>
                     ) }
                     { problem && (
                         <Message negative size="small" data-componentid={ `${ componentId }-problem` }>

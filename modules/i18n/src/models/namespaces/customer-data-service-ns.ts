@@ -19,6 +19,28 @@
 export interface CustomerDataServiceNS {
 
     b2b: {
+        organizationAccess: {
+            description: string;
+            heading: string;
+            modeChangeWarning: string;
+            notifications: {
+                error: {
+                    description: string;
+                    message: string;
+                };
+                success: {
+                    description: string;
+                    message: string;
+                };
+            };
+            options: {
+                all: string;
+                none: string;
+                selected: string;
+                selectedHint: string;
+            };
+            save: string;
+        };
         organizations: {
             columns: {
                 handle: string;
@@ -45,24 +67,12 @@ export interface CustomerDataServiceNS {
                         message: string;
                     };
                 };
-                sync: {
-                    error: {
-                        description: string;
-                        message: string;
-                    };
-                    success: {
-                        description: string;
-                        message: string;
-                    };
-                };
             };
             status: {
                 ACTIVE: string;
                 DELETED: string;
                 DISABLED: string;
             };
-            syncButton: string;
-            syncHint: string;
             toggleHint: string;
         };
         sharing: {
@@ -71,11 +81,6 @@ export interface CustomerDataServiceNS {
                 share: string;
             };
             description: string;
-            exclusions: {
-                hint: string;
-                label: string;
-                placeholder: string;
-            };
             heading: string;
             includeSubOrganizations: string;
             modal: {
@@ -122,8 +127,11 @@ export interface CustomerDataServiceNS {
                     state: string;
                 };
                 empty: string;
+                enabledOnly: string;
                 heading: string;
+                page: string;
                 reasons: {
+                    APP_NOT_SHARED: string;
                     LOCAL_NAME_CONFLICT: string;
                     MISSING_ATTRIBUTE: string;
                     SHARED_NAME_CONFLICT: string;
@@ -131,6 +139,7 @@ export interface CustomerDataServiceNS {
                 states: {
                     ACTIVE: string;
                     CONFLICTED: string;
+                    INACTIVE_APP_NOT_SHARED: string;
                     INACTIVE_MISSING_ATTRIBUTE: string;
                 };
             };

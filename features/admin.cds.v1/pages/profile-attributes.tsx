@@ -151,11 +151,13 @@ const toRowsFromScopeResponse = (
                     attribute_name: fullName,
                     belongs_to: appId,
                     chip_label: scope,
-                    deletable: true,
+                    deletable: a.origin !== "SHARED",
                     display_name: fieldPath || fullName,
                     editable: true,
                     id: `${scope}:${a.attribute_id ?? fullName}`,
-                    scope
+                    scope,
+                    // B2B: a shared attribute shows the Shared chip with its owner.
+                    shared_by: a.origin === "SHARED" ? a.owner_org_handle : undefined
                 };
             })
         );

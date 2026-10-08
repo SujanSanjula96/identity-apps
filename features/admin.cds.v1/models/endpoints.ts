@@ -34,7 +34,11 @@ export interface CustomerDataServiceEndpointsInterface {
      */
     cdsConfig: string;
     /**
-     * API to list the organizations of the tree and to reconcile them (B2B).
+     * API to list the organizations of the tree (B2B).
      */
     cdsOrganizations: string;
+    /**
+     * API of the organization access of a root organization (B2B).
+     */
+    cdsOrganizationAccess: string;
 }

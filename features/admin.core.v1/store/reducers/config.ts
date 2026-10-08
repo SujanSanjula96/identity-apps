@@ -108,6 +108,7 @@ export const commonConfigReducerInitialState: CommonConfigReducerStateInterface<
             bulk: "",
             captchaForSSOLogin: "",
             cdsConfig: "",
+            cdsOrganizationAccess: "",
             cdsOrganizations: "",
             cdsProfileSchema: "",
             cdsProfiles: "",
