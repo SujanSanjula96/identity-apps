@@ -18,9 +18,10 @@
 
 /**
  * Origin of a profile attribute or a unification rule in an organization.
- * OWNED: the organization owns it. SHARED: an ancestor organization shares it.
+ * OWNED: the organization owns it. SHARED: an ancestor organization shares it. INHERITED: a sub
+ * organization inherits the identity attribute from its root organization.
  */
-export type ResourceOrigin = "OWNED" | "SHARED";
+export type ResourceOrigin = "OWNED" | "SHARED" | "INHERITED";
 
 /**
  * State of a shared resource in one target organization.

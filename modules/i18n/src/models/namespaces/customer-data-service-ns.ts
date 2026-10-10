@@ -83,6 +83,9 @@ export interface CustomerDataServiceNS {
             description: string;
             heading: string;
             includeSubOrganizations: string;
+            inherited: string;
+            inheritedFrom: string;
+            inheritedNotice: string;
             modal: {
                 header: string;
                 subheader: string;

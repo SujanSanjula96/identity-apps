@@ -181,6 +181,8 @@ const ProfileAttributeEditPage: FunctionComponent<RouteComponentProps<RouteParam
     const [ _modalAlert, setModalAlert, modalAlertComponent ] = useConfirmationModalAlert();
     // B2B: an attribute that an ancestor organization shares is read-only here.
     const isShared: boolean = attribute?.origin === "SHARED";
+    // B2B: a sub organization inherits the identity attributes from its root.
+    const isInherited: boolean = attribute?.origin === "INHERITED";
     const isSubOrganization: boolean = useIsSubOrganization();
     // B2B: in this version, traits attributes and (from the root only) application data attributes can
     // be shared, when they are not complex and not sub-attributes.
@@ -395,9 +397,15 @@ const ProfileAttributeEditPage: FunctionComponent<RouteComponentProps<RouteParam
                                     <Grid.Column mobile={ 16 } tablet={ 16 } computer={ 16 }>
                                         <Message className="display-flex" size="small" info>
                                             <Icon name="info circle" />
-                                            <Message.Content className="tiny">
-                                                { t("customerDataService:profileAttributes.edit."+
-                                                "identityAttributesNotice") }
+                                            <Message.Content
+                                                className="tiny"
+                                                data-componentid={ `${componentId}-identity-notice` }
+                                            >
+                                                { isInherited
+                                                    ? t("customerDataService:b2b.sharing.inheritedNotice",
+                                                        { org: attribute.owner_org_handle })
+                                                    : t("customerDataService:profileAttributes.edit."+
+                                                    "identityAttributesNotice") }
                                             </Message.Content>
                                         </Message>
                                     </Grid.Column>
@@ -883,13 +891,14 @@ const ProfileAttributeEditPage: FunctionComponent<RouteComponentProps<RouteParam
                         </span>
                     </Image>
                 ) }
-                title={ isShared
+                title={ isShared || isInherited
                     ? (
                         <Box sx={ { alignItems: "center", display: "inline-flex", gap: 1 } }>
                             { title }
                             <SharedChip
                                 ownerOrg={ attribute.owner_org_handle }
-                                data-componentid={ `${componentId}-shared-chip` }
+                                inherited={ isInherited }
+                                data-componentid={ `${componentId}-${ isInherited ? "inherited" : "shared" }-chip` }
                             />
                         </Box>
                     )

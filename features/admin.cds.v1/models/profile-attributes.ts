@@ -68,7 +68,7 @@ export interface ProfileSchemaAttribute {
     // Canonical values for attributes for options value type.
     canonical_values?: CanonicalValues[];
 
-    // B2B: OWNED, or SHARED by the organization in owner_org_handle.
+    // B2B: OWNED, SHARED by the organization in owner_org_handle, or INHERITED from it.
     origin?: ResourceOrigin;
     owner_org_handle?: string;
 }

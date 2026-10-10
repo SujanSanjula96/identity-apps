@@ -89,6 +89,9 @@ export const customerDataService: CustomerDataServiceNS = {
             description: "A sub organization can use a shared {{resource}}, but it cannot change it.",
             heading: "Share with sub organizations",
             includeSubOrganizations: "Include its sub organizations",
+            inherited: "Inherited",
+            inheritedFrom: "Inherited from {{org}}",
+            inheritedNotice: "This organization inherits this attribute from {{org}}. The identity provider controls it.",
             modal: {
                 header: "Share unification rule",
                 subheader: "Share the rule {{ruleName}} with sub organizations."

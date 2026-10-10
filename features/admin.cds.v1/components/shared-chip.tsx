@@ -27,14 +27,20 @@ interface SharedChipPropsInterface extends IdentifiableComponentInterface {
      * Handle of the organization that owns and shares the item.
      */
     ownerOrg?: string;
+    /**
+     * Shows the chip of an inherited identity attribute instead.
+     */
+    inherited?: boolean;
 }
 
 /**
- * Marks an attribute or rule that a parent organization shares (B2B). Uses the same Oxygen
- * chip as shared connections. The owner organization shows in the tooltip.
+ * Marks an attribute or rule that a parent organization shares (B2B), or an identity attribute that
+ * a sub organization inherits from its root. Uses the same Oxygen chip as shared connections. The
+ * owner organization shows in the tooltip.
  */
 const SharedChip: FunctionComponent<SharedChipPropsInterface> = ({
     ownerOrg,
+    inherited = false,
     ["data-componentid"]: componentId = "cds-shared-chip"
 }: SharedChipPropsInterface): ReactElement => {
 
@@ -42,7 +48,9 @@ const SharedChip: FunctionComponent<SharedChipPropsInterface> = ({
 
     const chip: ReactElement = (
         <Chip
-            label={ t("customerDataService:b2b.sharing.shared") }
+            label={ inherited
+                ? t("customerDataService:b2b.sharing.inherited")
+                : t("customerDataService:b2b.sharing.shared") }
             size="small"
             data-componentid={ componentId }
         />
@@ -53,7 +61,11 @@ const SharedChip: FunctionComponent<SharedChipPropsInterface> = ({
     }
 
     return (
-        <Tooltip title={ t("customerDataService:b2b.sharing.sharedBy", { org: ownerOrg }) }>
+        <Tooltip
+            title={ inherited
+                ? t("customerDataService:b2b.sharing.inheritedFrom", { org: ownerOrg })
+                : t("customerDataService:b2b.sharing.sharedBy", { org: ownerOrg }) }
+        >
             { chip }
         </Tooltip>
     );
